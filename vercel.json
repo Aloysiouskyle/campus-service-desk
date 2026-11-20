@@ -1,0 +1,3 @@
+{
+  "buildCommand": "python3 -m pip install --target /tmp/campus-photo-build -r requirements.txt && PYTHONPATH=/tmp/campus-photo-build python3 scripts/build_photos.py"
+}
