@@ -4,7 +4,7 @@
 {% block content %}
 <div class="login-layout">
   <section class="login-form">
-    <div class="login-brand">{{ icon('campus',28) }} Campus Service Desk</div>
+    <div class="login-brand">{{ icon('campus',28) }} Campus Service Desk {{ theme_switch() }}</div>
     <div class="login-fields">
       <p class="eyebrow">{{ 'VISITOR ACCESS' if read_only else 'STAFF ACCESS' }}</p>
       <h1>Sign in</h1>
