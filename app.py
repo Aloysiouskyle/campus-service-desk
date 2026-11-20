@@ -73,6 +73,16 @@ def create_app(config=None):
     @click.password_option(confirmation_prompt=True)
     def create_staff(email, password):
         """Create a local staff login."""
+        create_account(email, password, "staff")
+
+    @app.cli.command("create-student")
+    @click.argument("email")
+    @click.password_option(confirmation_prompt=True)
+    def create_student(email, password):
+        """Create a local student login."""
+        create_account(email, password, "student")
+
+    def create_account(email, password, role):
         if app.config["READ_ONLY"]:
             raise click.ClickException("The preview uses a visitor account.")
         email = email.strip().lower()
@@ -81,10 +91,11 @@ def create_app(config=None):
         db = database()
         try:
             with db:
-                db.execute("INSERT INTO staff VALUES (?, ?)", (email, generate_password_hash(password)))
+                db.execute("INSERT INTO accounts(email, password_hash, role) VALUES (?, ?, ?)",
+                           (email, generate_password_hash(password), role))
         except sqlite3.IntegrityError as error:
             raise click.ClickException("This email already has an account.") from error
-        click.echo("Staff account created.")
+        click.echo(f"{role.capitalize()} account created.")
 
     @app.route("/sign-in", methods=["GET", "POST"])
     def sign_in():
@@ -98,7 +109,7 @@ def create_app(config=None):
                 account_exists = email == demo_email
                 stored_hash = fallback_hash
             else:
-                row = database().execute("SELECT password_hash FROM staff WHERE email = ?", (email,)).fetchone()
+                row = database().execute("SELECT password_hash FROM accounts WHERE email = ?", (email,)).fetchone()
                 account_exists = row is not None
                 stored_hash = row["password_hash"] if row else fallback_hash
             if check_password_hash(stored_hash, request.form.get("password", "")) and account_exists:
@@ -128,14 +139,25 @@ def create_app(config=None):
             if not token or not hmac.compare_digest(token.encode(), request.form.get("csrf", "").encode()):
                 abort(400, "The form expired. Reload the page and try again.")
 
-        if (not app.config["READ_ONLY"] and not session.get("email")
-                and request.endpoint not in {"sign_in", "static", "photos.photo", None}):
-            return redirect(url_for("sign_in"), code=303)
+        g.role = None
+        if not app.config["READ_ONLY"] and request.endpoint not in {"static", "photos.photo", None}:
+            email = session.get("email")
+            if email:
+                account = database().execute("SELECT role FROM accounts WHERE email = ?", (email,)).fetchone()
+                if account:
+                    g.role = account["role"]
+                else:
+                    session.clear()
+            if g.role is None and request.endpoint != "sign_in":
+                return redirect(url_for("sign_in"), code=303)
+
+    def student_owner():
+        return session["email"] if g.role == "student" else None
 
     @app.context_processor
     def template_values():
         return dict(statuses=desk.STATUSES, categories=desk.CATEGORIES, priorities=desk.PRIORITIES,
-                    read_only=app.config["READ_ONLY"], csrf_token=csrf_token)
+                    read_only=app.config["READ_ONLY"], student_view=g.get("role") == "student", csrf_token=csrf_token)
 
     @app.template_filter("reference")
     def reference(ticket_id):
@@ -175,8 +197,12 @@ def create_app(config=None):
     def dashboard():
         db = database()
         filters = current_filters()
-        counts = dict(db.execute("SELECT status, count(*) FROM tickets GROUP BY status").fetchall())
-        return render_template("dashboard.html", tickets=desk.matching_tickets(db, filters),
+        owner = student_owner()
+        counts = dict(db.execute(
+            "SELECT status, count(*) FROM tickets WHERE (? IS NULL OR owner_email = ?) GROUP BY status",
+            (owner, owner),
+        ).fetchall())
+        return render_template("dashboard.html", tickets=desk.matching_tickets(db, filters, owner),
                                filters=filters, counts=counts, total=sum(counts.values()))
 
     @app.route("/requests/new", methods=["GET", "POST"])
@@ -198,7 +224,7 @@ def create_app(config=None):
             if not errors:
                 db = database()
                 with db:
-                    ticket_id = desk.add_ticket(db, **data, created_at=desk.timestamp())
+                    ticket_id = desk.add_ticket(db, **data, created_at=desk.timestamp(), owner_email=session["email"])
                 flash(f"Request {reference(ticket_id)} submitted.")
                 return redirect(url_for("detail", ticket_id=ticket_id), code=303)
         return render_template("new.html", data=data, errors=errors), 422 if errors else 200
@@ -209,7 +235,7 @@ def create_app(config=None):
         with db:
             db.execute("BEGIN")
             ticket = db.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
-            if ticket is None:
+            if ticket is None or (g.role == "student" and ticket["owner_email"] != student_owner()):
                 abort(404)
             history = db.execute(
                 "SELECT * FROM events WHERE ticket_id = ? ORDER BY id DESC", (ticket_id,),
@@ -223,6 +249,8 @@ def create_app(config=None):
 
     @app.post("/requests/<int:ticket_id>/status")
     def update_status(ticket_id):
+        if g.role != "staff":
+            abort(403, "Only staff can update request status.")
         note = request.form.get("note", "").strip()
         status = request.form.get("status", "")
         if len(note) > 500:
@@ -243,7 +271,7 @@ def create_app(config=None):
         buffer = io.StringIO(newline="")
         writer = csv.writer(buffer)
         writer.writerow(["Reference", "Title", "Category", "Priority", "Status", "Created (UTC)"])
-        for ticket in desk.matching_tickets(database(), current_filters()):
+        for ticket in desk.matching_tickets(database(), current_filters(), student_owner()):
             title = ticket["title"]
             if title.lstrip().startswith(("=", "+", "-", "@")) or title.startswith(("\t", "\r", "\n")):
                 title = "'" + title

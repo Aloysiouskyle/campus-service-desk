@@ -4,7 +4,7 @@ A campus help-desk application for reporting everyday issues, tracking each requ
 
 **[Open the live portfolio preview](https://campus-service-desk-six.vercel.app)**
 
-The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to create requests, update statuses, and inspect the history in a private copy of that queue. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local staff app uses persistent SQLite storage.
+The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to submit a request in **Student** view. Select **Staff** on that ticket, move it to **In progress**, and add a note. Switch back to **Student** to see the response. Staff can see all demo tickets. Students see their own tickets. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local app uses persistent SQLite storage.
 
 ## Try it locally
 
@@ -19,20 +19,21 @@ Activate the environment with `.venv\Scripts\Activate.ps1` in Windows PowerShell
 ```bash
 python -m pip install -r requirements.txt
 python -m flask --app app seed
-python -m flask --app app create-staff you@example.com
+python -m flask --app app create-staff staff@example.com
+python -m flask --app app create-student student@example.com
 python -m flask --app app run
 ```
 
-Choose a password of at least 12 characters when prompted. Sign in with this email and password.
+Choose a password of at least 12 characters when prompted. Each account signs in on the same page. Use separate browser profiles to try both accounts at once.
 
 Open [http://127.0.0.1:5000](http://127.0.0.1:5000). Skip the seed command to start with an empty dashboard. Seeding only populates an empty database, so rerunning it preserves existing requests.
 
 ### Five-minute walkthrough
 
-1. Submit a request titled **Broken keyboard in Lab 3** under **IT Support** with a short description.
+1. Sign in as the student and submit a request titled **Broken keyboard in Lab 3** under **IT Support** with a short description.
 2. Copy its tracking reference, return to the dashboard, and search for it.
-3. Open the request, move it to **In progress**, and add a note. Resolve it and check that both updates appear in the history.
-4. Filter the dashboard by **Resolved** and export the matching requests as CSV.
+3. Sign in as staff, open the request, move it to **In progress**, and add a note. Resolve it and check that both updates appear in the history.
+4. Filter the dashboard by **Resolved** and export the matching requests as CSV. Sign back in as the student to read the update.
 
 ## How it works
 
@@ -46,7 +47,7 @@ flowchart TD
 
 When you submit a request, Flask checks the form and asks SQLite to save the ticket and its first history entry together. Flask then redirects you to the ticket page. On that page, the app reads the ticket and its history from SQLite and inserts them into an HTML template.
 
-SQLite has two tables. **tickets** holds the current state of each request. **events** holds its submission and status changes, with many events linked to one ticket. The local database is a file at `instance/desk.sqlite3`, so requests survive application restarts. Set `CSD_DATABASE` to use a different file.
+SQLite has three tables. **accounts** stores each login and its student or staff role. **tickets** holds the current state of each request and links it to the account that submitted it. **events** holds its submission and status changes, with many events linked to one ticket. The local database is a file at `instance/desk.sqlite3`, so requests survive application restarts. Set `CSD_DATABASE` to use a different file.
 
 | Path | Job |
 | --- | --- |
@@ -70,11 +71,11 @@ SQLite has two tables. **tickets** holds the current state of each request. **ev
 python -m unittest discover -s tests -v
 ```
 
-The suite covers ticket creation and restart persistence, input validation, status transitions and history, stale updates, shared filters and CSV output, HTML escaping, form-token checks, sample data, and the hosted preview's write restrictions.
+The suite covers ticket creation and restart persistence, input validation, status transitions and history, stale updates, shared filters and CSV output, HTML escaping, form-token checks, sample data, student ownership across the dashboard, detail and CSV routes, staff-only updates, database upgrades, and the hosted preview's write restrictions.
 
 ## Deployment and scope
 
-Local staff sign in to a shared queue. Staff passwords are stored as salted hashes. A signed session cookie identifies the signed-in user. Set a stable random CSD_SECRET_KEY for shared deployments. The public visitor account is available only in the read-only preview. Use fictional request details.
+Flask checks the signed-in account’s role on each request. Students can submit, search, and export their own requests and read staff responses. Staff can see and update the full queue. Accounts are created with the local CLI. Older databases upgrade at startup. Existing staff keep their logins and tickets without a known owner remain visible to staff only. Account passwords are stored as salted hashes. A signed session cookie identifies the signed-in user. Set a stable random CSD_SECRET_KEY for shared deployments. The public visitor account is available only in the read-only preview. Use fictional request details.
 
 On Vercel, the app uses an in-memory SQLite database seeded with the same fictional records on each request. This makes the public preview repeatable across serverless instances. Visitors can browse, filter, inspect ticket history, and download CSV. The shared preview stays read-only. The interactive demo edits a tab-local copy of the seed tickets, using the same status transitions as the staff workflow. To preview the same mode locally, set `CSD_READ_ONLY=1` before starting Flask.
 

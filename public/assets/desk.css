@@ -343,3 +343,9 @@ h1 { font-weight: 500; }
 .demo-list small { display: block; color: var(--muted); }
 #demo-description { margin: 14px 0 22px; }
 #demo-new > h2 { margin-bottom: 12px; }
+
+.demo-roles { display: flex; gap: .5rem; flex-wrap: wrap; padding: 0; border: 0; margin: 1rem 0 0; }
+.demo-roles legend { font-weight: 600; margin-bottom: .4rem; }
+.demo-roles label { display: inline-flex; align-items: center; gap: .55rem; padding: .55rem 1rem; border: 1px solid var(--line); border-radius: .65rem; cursor: pointer; }
+.demo-roles label:has(:checked) { border-color: currentColor; font-weight: 700; }
+.demo-roles input { width: 1rem; height: 1rem; margin: 0; }

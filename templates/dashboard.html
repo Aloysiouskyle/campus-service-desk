@@ -8,8 +8,8 @@
 <header class="hero campus-hero">
   <div class="hero-copy">
     <p class="eyebrow">CAMPUS SERVICE DESK</p>
-    <h1>Request dashboard</h1>
-    <p>{{ 'Explore the campus queue, follow a request, or export a report.' if read_only else 'Triage new requests and follow up on work across campus.' }}</p>
+    <h1>{{ 'Student dashboard' if student_view else 'Request dashboard' if read_only else 'Staff dashboard' }}</h1>
+    <p>{{ 'Report an issue and follow the progress of your requests.' if student_view else 'Explore the campus queue, follow a request, or export a report.' if read_only else 'Triage new requests and follow up on work across campus.' }}</p>
     {% if not read_only %}<a class="button primary" href="{{ url_for('create_ticket') }}">{{ icon('plus',18) }} New request</a>
     {% else %}<a class="button primary" href="{{ url_for('demo') }}">Try the demo {{ icon('arrow',17) }}</a>{% endif %}
   </div>
@@ -29,7 +29,7 @@
 </section>
 <section class="panel request-list" id="request-list" aria-labelledby="list-title">
   <div class="panel-head">
-    <div><h2 id="list-title">All requests</h2><p>Search by title or tracking reference.</p></div>
+    <div><h2 id="list-title">{{ 'My requests' if student_view else 'All requests' }}</h2><p>Search by title or tracking reference.</p></div>
     <a class="button outline" href="{{ url_for('export', **filters) }}">{{ icon('download',17) }} Export CSV</a>
   </div>
   <form class="filters" method="get" action="{{ url_for('dashboard') }}#request-list">

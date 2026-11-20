@@ -13,12 +13,14 @@ TRANSITIONS = {
 }
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS staff (
+CREATE TABLE IF NOT EXISTS accounts (
     email TEXT PRIMARY KEY COLLATE NOCASE,
-    password_hash TEXT NOT NULL
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('staff', 'student'))
 );
 CREATE TABLE IF NOT EXISTS tickets (
     id INTEGER PRIMARY KEY,
+    owner_email TEXT REFERENCES accounts(email),
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     category TEXT NOT NULL,
@@ -76,10 +78,11 @@ def connect(path):
     return db
 
 
-def add_ticket(db, title, description, category, priority, created_at):
+def add_ticket(db, title, description, category, priority, created_at, owner_email=None):
     ticket_id = db.execute(
-        "INSERT INTO tickets(title, description, category, priority, created_at) VALUES (?, ?, ?, ?, ?)",
-        (title, description, category, priority, created_at),
+        """INSERT INTO tickets(title, description, category, priority, created_at, owner_email)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (title, description, category, priority, created_at, owner_email),
     ).lastrowid
     add_event(db, ticket_id, "Open", "Request submitted.", created_at)
     return ticket_id
@@ -111,6 +114,14 @@ def change_status(db, ticket_id, expected_event, status, note):
 
 def init_db(db, seed=False):
     db.executescript(SCHEMA)
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='staff'").fetchone():
+            db.execute("INSERT INTO accounts SELECT email, password_hash, 'staff' FROM staff")
+            db.execute("DROP TABLE staff")
+        if "owner_email" not in {row["name"] for row in db.execute("PRAGMA table_info(tickets)")}:
+            db.execute("ALTER TABLE tickets ADD COLUMN owner_email TEXT REFERENCES accounts(email)")
+        db.execute("CREATE INDEX IF NOT EXISTS tickets_by_owner ON tickets(owner_email, status)")
     if seed:
         with db:
             db.execute("BEGIN IMMEDIATE")
@@ -130,8 +141,11 @@ def init_db(db, seed=False):
                 db.execute("UPDATE tickets SET status = ? WHERE id = ?", (status, ticket_id))
 
 
-def matching_tickets(db, filters):
+def matching_tickets(db, filters, owner_email=None):
     clauses, values = [], []
+    if owner_email is not None:
+        clauses.append("owner_email = ?")
+        values.append(owner_email)
     for field in ("status", "category", "priority"):
         if filters[field]:
             clauses.append(f"{field} = ?")

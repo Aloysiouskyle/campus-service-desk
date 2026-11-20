@@ -50,7 +50,7 @@
     <a href="{{ url_for('create_ticket') }}" {% if request.endpoint == 'create_ticket' %}aria-current="page"{% endif %}>{{ icon('plus',17) }} New request</a>
     {% endif %}
   </nav>
-  <div class="sidebar-foot"><span class="mode-dot"></span> {{ 'Private demo' if request.endpoint == 'demo' else 'Read-only preview' if read_only else 'Demo workspace' }}</div>
+  <div class="sidebar-foot"><span class="mode-dot"></span> {{ 'Private demo' if request.endpoint == 'demo' else 'Read-only preview' if read_only else 'Student workspace' if student_view else 'Staff workspace' }}</div>
 </aside>
 <div class="workspace">
   <header class="topbar"><span>Service desk</span><span class="crumb">/</span><strong>{% block breadcrumb %}Requests{% endblock %}</strong>

@@ -7,6 +7,11 @@
   const storageKey = "campus-desk.private-demo.v1";
   const views = ["queue", "new", "detail"];
   const reference = (id) => "CSD-" + String(id).padStart(4, "0");
+  const roleKey = "campus-desk.demo-role";
+  const roles = document.querySelectorAll('input[name="demo-role"]');
+  const studentSamples = new Set([4, 6, 12]);
+  const sampleIds = new Set(seed.map((ticket) => ticket.id));
+  let role = "student";
   let tickets = seed;
   let selected;
   let storage;
@@ -18,6 +23,7 @@
 
   try {
     storage = window.sessionStorage;
+    if (storage.getItem(roleKey) === "staff") role = "staff";
     const saved = storage.getItem(storageKey);
     if (saved) tickets = JSON.parse(saved);
   } catch {
@@ -46,11 +52,20 @@
     return element("span", status, "pill " + status.toLowerCase().replaceAll(" ", "-"));
   }
 
+  function visible(ticket) {
+    // Earlier demos had one user. Keep their submitted tickets in the student view.
+    const mine = ticket.submittedBy === "student" ||
+      (ticket.submittedBy === undefined && (studentSamples.has(ticket.id) || !sampleIds.has(ticket.id)));
+    return role === "staff" || mine;
+  }
+
   function renderQueue() {
+    get("demo-queue-title").textContent = role === "student" ? "My requests" : "Staff queue";
     const query = get("demo-search").value.trim().toLowerCase();
     const list = get("demo-list");
     list.replaceChildren();
     for (const ticket of tickets) {
+      if (!visible(ticket)) continue;
       if (!(reference(ticket.id) + " " + ticket.title).toLowerCase().includes(query)) continue;
       const link = document.createElement("a");
       link.href = "#ticket-" + ticket.id;
@@ -70,6 +85,7 @@
     get("demo-meta").textContent = ticket.category + " · " + ticket.priority + " priority";
     get("demo-description").textContent = ticket.description;
     get("demo-current").replaceChildren(statusPill(ticket.status));
+    get("demo-update").hidden = role !== "staff";
     get("demo-update").reset();
     get("demo-status").replaceChildren(new Option("Choose a status", ""),
       ...transitions[ticket.status].map((status) => new Option(status)));
@@ -84,11 +100,23 @@
 
   function render() {
     const hash = location.hash.slice(1);
-    selected = tickets.find((ticket) => "ticket-" + ticket.id === hash);
+    selected = tickets.find((ticket) => visible(ticket) && "ticket-" + ticket.id === hash);
     const view = selected ? "detail" : hash === "new" ? "new" : "queue";
     for (const name of views) get("demo-" + name).hidden = name !== view;
     if (selected) renderDetail(selected);
     else if (view === "queue") renderQueue();
+  }
+
+  for (const input of roles) {
+    input.checked = input.value === role;
+    input.addEventListener("change", () => {
+      role = input.value;
+      try { storage.setItem(roleKey, role); } catch { /* Switching still works for this page. */ }
+      get("demo-search").value = "";
+      if (selected && !visible(selected)) location.hash = "queue";
+      announce(role === "staff" ? "Staff view. You can manage all demo requests." : "Student view. Showing your requests.");
+      render();
+    });
   }
 
   get("demo-search").addEventListener("input", renderQueue);
@@ -105,7 +133,7 @@
     const id = Math.max(0, ...tickets.map((ticket) => ticket.id)) + 1;
     const created_at = new Date().toISOString();
     const entry = { status: "Open", note: "Request submitted.", created_at };
-    const ticket = { ...data, id, title, description, status: "Open", created_at, history: [entry] };
+    const ticket = { ...data, id, title, description, submittedBy: role, status: "Open", created_at, history: [entry] };
     if (!save([ticket, ...tickets])) return;
     form.reset();
     get("description").dispatchEvent(new Event("input"));
@@ -116,7 +144,7 @@
   get("demo-update").addEventListener("submit", (event) => {
     event.preventDefault();
     const status = get("demo-status").value;
-    if (!selected || !transitions[selected.status].includes(status)) return;
+    if (role !== "staff" || !selected || !transitions[selected.status].includes(status)) return;
     const entry = { status, note: get("demo-note").value.trim() || "Status updated.", created_at: new Date().toISOString() };
     const updated = { ...selected, status, history: [entry, ...selected.history] };
     if (!save(tickets.map((ticket) => ticket.id === selected.id ? updated : ticket))) return;

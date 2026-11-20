@@ -1,9 +1,12 @@
 import csv
 import io
 import re
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+
+from werkzeug.security import generate_password_hash
 
 from app import create_app
 
@@ -118,6 +121,64 @@ class ServiceDeskTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["Title"], "'=Formula-looking title, with comma")
         self.assertEqual(rows[0]["Reference"], "CSD-0001")
+
+    def test_students_track_only_their_tickets_and_staff_can_respond(self):
+        students = []
+        for name in ("alicia", "daniel"):
+            email = f"{name}@example.test"
+            account = self.app.test_cli_runner().invoke(
+                args=["create-student", email, "--password", "test-student-password"])
+            self.assertEqual(account.exit_code, 0, account.output)
+            client = self.app.test_client()
+            self.assertEqual(self.login(client, email, "test-student-password").status_code, 303)
+            response = client.post("/requests/new", data={
+                "csrf": self.hidden(client.get("/requests/new"), "csrf"), "title": f"{name} lab request",
+                "description": "The lab printer needs paper.", "priority": "Normal", "category": "IT Support",
+                "owner_email": "staff@example.test",
+            })
+            self.assertEqual(response.status_code, 303)
+            students.append(client)
+        alicia, daniel = students
+        for path in ("/", "/?q=lab", "/requests/export.csv?q=lab"):
+            page = alicia.get(path).data
+            self.assertIn(b"alicia lab request", page)
+            self.assertNotIn(b"daniel lab request", page)
+        self.assertIn(b"Showing 1 of 1 request", alicia.get("/").data)
+        self.assertEqual(alicia.get("/requests/2").status_code, 404)
+        self.assertEqual(daniel.get("/requests/1").status_code, 404)
+        own_ticket = alicia.get("/requests/1")
+        self.assertNotIn(b"Update status", own_ticket.data)
+        self.assertEqual(alicia.post("/requests/1/status", data={
+            "csrf": self.hidden(own_ticket, "csrf"), "version": "1", "role": "staff",
+            "status": "In progress",
+        }).status_code, 403)
+        self.assertIn(b"Showing 2 of 2 requests", self.client.get("/").data)
+        self.assertEqual(self.update("In progress").status_code, 303)
+        self.assertIn(b"Confirmed by lab support.", alicia.get("/requests/1").data)
+
+    def test_existing_staff_login_and_ticket_survive_schema_upgrade(self):
+        legacy_path = str(Path(self.config["DATABASE"]).with_name("old.sqlite3"))
+        with sqlite3.connect(legacy_path) as db:
+            db.executescript("""
+                CREATE TABLE staff (email TEXT PRIMARY KEY COLLATE NOCASE, password_hash TEXT NOT NULL);
+                CREATE TABLE tickets (id INTEGER PRIMARY KEY, title TEXT, description TEXT,
+                    category TEXT, priority TEXT, status TEXT DEFAULT 'Open', created_at TEXT);
+                INSERT INTO tickets VALUES (1, 'Old projector', 'Broken lamp', 'Facilities',
+                    'High', 'Open', '2026-10-01');
+            """)
+            db.execute("INSERT INTO staff VALUES (?, ?)",
+                       ("staff@example.test", generate_password_hash("test-staff-password")))
+        legacy = create_app({**self.config, "DATABASE": legacy_path})
+        client = legacy.test_client()
+        self.assertEqual(self.login(client).status_code, 303)
+        self.assertIn(b"Old projector", client.get("/").data)
+        result = legacy.test_cli_runner().invoke(
+            args=["create-student", "ada@example.test", "--password", "test-student-password"])
+        self.assertEqual(result.exit_code, 0)
+        student = legacy.test_client()
+        self.assertEqual(self.login(student, "ada@example.test", "test-student-password").status_code, 303)
+        self.assertEqual(student.get("/requests/1").status_code, 404)
+        self.assertNotIn(b"Old projector", student.get("/requests/export.csv").data)
 
     def test_ticket_text_is_escaped_in_html(self):
         self.submit(title="<b>Lab monitor</b>")
