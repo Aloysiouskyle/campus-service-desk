@@ -5,6 +5,7 @@ import hmac
 import io
 import os
 import secrets
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +13,8 @@ import click
 from flask import (
     Flask, Response, abort, flash, g, redirect, render_template, request, session, url_for,
 )
+
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import desk
 
@@ -25,6 +28,10 @@ def create_app(config=None):
         MAX_CONTENT_LENGTH=24 * 1024,
     )
     app.config.update(config or {})
+
+    demo_email = "visitor@campus.example"
+    demo_password = "MukonoDesk2026"
+    fallback_hash = generate_password_hash(demo_password if app.config["READ_ONLY"] else secrets.token_urlsafe())
 
     def database():
         if "db" not in g:
@@ -58,6 +65,52 @@ def create_app(config=None):
         desk.init_db(database(), seed=True)
         click.echo("Sample data initialized. Existing tickets were preserved.")
 
+    @app.cli.command("create-staff")
+    @click.argument("email")
+    @click.password_option(confirmation_prompt=True)
+    def create_staff(email, password):
+        """Create a local staff login."""
+        if app.config["READ_ONLY"]:
+            raise click.ClickException("The preview uses a visitor account.")
+        email = email.strip().lower()
+        if "@" not in email or len(password) < 12:
+            raise click.ClickException("Enter an email address and a password of at least 12 characters.")
+        db = database()
+        try:
+            with db:
+                db.execute("INSERT INTO staff VALUES (?, ?)", (email, generate_password_hash(password)))
+        except sqlite3.IntegrityError as error:
+            raise click.ClickException("This email already has an account.") from error
+        click.echo("Staff account created.")
+
+    @app.route("/sign-in", methods=["GET", "POST"])
+    def sign_in():
+        if session.get("email"):
+            return redirect(url_for("dashboard"))
+        error = None
+        email = ""
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            if app.config["READ_ONLY"]:
+                account_exists = email == demo_email
+                stored_hash = fallback_hash
+            else:
+                row = database().execute("SELECT password_hash FROM staff WHERE email = ?", (email,)).fetchone()
+                account_exists = row is not None
+                stored_hash = row["password_hash"] if row else fallback_hash
+            if check_password_hash(stored_hash, request.form.get("password", "")) and account_exists:
+                session.clear()
+                session["email"] = email
+                return redirect(url_for("dashboard"), code=303)
+            error = "The email or password is incorrect."
+        return render_template("sign_in.html", email=email, error=error, demo_email=demo_email,
+                               demo_password=demo_password), 401 if error else 200
+
+    @app.post("/sign-out")
+    def sign_out():
+        session.clear()
+        return redirect(url_for("sign_in"), code=303)
+
     def csrf_token():
         if "csrf" not in session:
             session["csrf"] = secrets.token_urlsafe(32)
@@ -66,11 +119,15 @@ def create_app(config=None):
     @app.before_request
     def protect_writes():
         if request.method == "POST":
-            if app.config["READ_ONLY"]:
+            if app.config["READ_ONLY"] and request.endpoint not in {"sign_in", "sign_out"}:
                 abort(403, "The hosted preview is read-only.")
             token = session.get("csrf")
             if not token or not hmac.compare_digest(token.encode(), request.form.get("csrf", "").encode()):
                 abort(400, "The form expired. Reload the page and try again.")
+
+        if (not app.config["READ_ONLY"] and not session.get("email")
+                and request.endpoint not in {"sign_in", "static", None}):
+            return redirect(url_for("sign_in"), code=303)
 
     @app.context_processor
     def template_values():

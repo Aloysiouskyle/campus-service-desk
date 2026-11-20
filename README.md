@@ -19,8 +19,11 @@ Activate the environment with `.venv\Scripts\Activate.ps1` in Windows PowerShell
 ```bash
 python -m pip install -r requirements.txt
 python -m flask --app app seed
+python -m flask --app app create-staff you@example.com
 python -m flask --app app run
 ```
+
+Choose a password of at least 12 characters when prompted. Sign in with this email and password.
 
 Open [http://127.0.0.1:5000](http://127.0.0.1:5000). Skip the seed command to start with an empty dashboard. Seeding only populates an empty database, so rerunning it preserves existing requests.
 
@@ -71,6 +74,10 @@ The suite covers ticket creation and restart persistence, input validation, stat
 
 ## Deployment and scope
 
-The local application is a shared demo workspace without sign-in or staff permissions. Use fictional request details. A real campus rollout would need user accounts, role-based access, and backing storage with a backup policy.
+Local staff sign in to a shared queue. Staff passwords are stored as salted hashes. A signed session cookie identifies the signed-in user. Set a stable random CSD_SECRET_KEY for shared deployments. The public visitor account is available only in the read-only preview. Use fictional request details.
 
-On Vercel, the app uses an in-memory SQLite database seeded with the same fictional records on each request. This makes the public preview repeatable across serverless instances. Visitors can browse, filter, inspect ticket history, and download CSV. The preview disables the two write operations. To preview the same mode locally, set `CSD_READ_ONLY=1` before starting Flask.
+On Vercel, the app uses an in-memory SQLite database seeded with the same fictional records on each request. This makes the public preview repeatable across serverless instances. Visitors can browse, filter, inspect ticket history, and download CSV. The preview disables ticket submission and status updates. To preview the same mode locally, set `CSD_READ_ONLY=1` before starting Flask.
+
+## Campus photography
+
+The dashboard features [Hamu Mukasa Library by Tamdra](https://commons.wikimedia.org/wiki/File:Hamu_Mukasa_Library.jpg). The sign-in page features [the Bishop Tucker Building by Ssemmanda will](https://commons.wikimedia.org/wiki/File:The_Bishop_Tucker_Building_-_UCU_Mukono_05.jpg). Both photographs are displayed from Wikimedia Commons under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) with responsive crops. This portfolio project is independent of the university.

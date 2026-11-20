@@ -148,3 +148,43 @@ dd { margin: 0; font-weight: 650; }
   .detail-grid { grid-template-columns: 1fr; }
   .form-panel, .padded { padding: 15px; }
 }
+
+/* Warm paper, dark ink and brick accents echo the campus architecture. */
+:root { --surface: #f7f5ef; --deep: #242e2a; --line: #deded3; --green: #814225; }
+h1, h2, .brand, .login-brand { font-family: Georgia, "Times New Roman", serif; }
+h1 { font-weight: 500; }
+.brand-icon { color: #fff7e7; background: #814225; }
+.sidebar nav a[aria-current] { background: #39443b; color: #fff9e9; }
+.identity { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.account-link { border: 0; background: transparent; color: #734025; font-weight: 700; padding: 5px; }
+.campus-hero { padding: 0; gap: 0; background: #f0e8db; border: 1px solid #ded6c7; display: grid; grid-template-columns: 1.15fr 1fr; align-items: stretch; border-radius: 4px; overflow: hidden; }
+.hero-copy { padding: clamp(24px, 3vw, 48px); align-self: center; }
+.hero-copy h1 { font-size: clamp(2.4rem, 4.3vw, 4.6rem); line-height: 1; }
+.hero-copy .eyebrow, .login-fields .eyebrow { color: #804426; }
+.hero-copy > p:not(.eyebrow) { margin: 12px 0 18px; max-width: 38ch; }
+.hero-action { font-weight: 700; color: #713d22; border-bottom: 1px solid; }
+.campus-photo { margin: 0; position: relative; overflow: hidden; min-height: 220px; background: #404b40; }
+.campus-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.campus-photo figcaption { position: absolute; bottom: 0; left: 0; right: 0; color: white; padding: 30px 14px 9px; font-size: .75rem; background: linear-gradient(transparent, #142019eb); }
+.campus-photo figcaption a { text-decoration: underline; }
+.stat, .panel { border-radius: 5px; }
+.stat-icon { border-radius: 50%; }
+.login-page { display: block; }
+.login-page main { max-width: none; padding: 0; }
+.login-layout { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+.login-form { display: flex; flex-direction: column; padding: clamp(22px, 5vw, 78px); }
+.login-brand { display: flex; align-items: center; gap: 10px; font-size: 1.4rem; color: #583b2b; }
+.login-fields { width: 100%; max-width: 410px; margin: auto; padding: 48px 0; }
+.login-fields h1 { font-size: clamp(3rem, 6vw, 5rem); }
+.login-fields > p:not(.eyebrow) { margin: 12px 0 20px; }
+.login-fields label { display: block; margin: 13px 0 5px; font-weight: 650; }
+.login-fields button { width: 100%; margin: 20px 0; }
+.visitor { border-left: 3px solid #a06945; background: #eee8db; padding: 12px 15px; font-size: .88rem; margin-bottom: 14px; }
+.login-photo figcaption { padding: 50px 24px 22px; }
+@media(max-width: 620px) {
+  .campus-hero, .login-layout { grid-template-columns: 1fr; }
+  .campus-photo { min-height: 155px; }
+  .login-photo { min-height: 230px; }
+  .login-fields { padding: 35px 0 8px; }
+  .identity span { display: none; }
+}

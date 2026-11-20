@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<header class="hero">
-  <div>
-    <p class="eyebrow">CAMPUS OPERATIONS</p>
+<header class="hero campus-hero">
+  <div class="hero-copy">
+    <p class="eyebrow">CAMPUS SERVICE DESK</p>
     <h1>Request dashboard</h1>
-    <p>Track and manage campus support requests in one place.</p>
+    <p>{{ 'Explore the campus queue, follow a request, or export a report.' if read_only else 'Triage new requests and follow up on work across campus.' }}</p>
+    {% if not read_only %}<a class="button primary" href="{{ url_for('create_ticket') }}">{{ icon('plus',18) }} New request</a>
+    {% else %}<a class="hero-action" href="#request-list">Browse requests ↓</a>{% endif %}
   </div>
-  {% if not read_only %}<a class="button primary" href="{{ url_for('create_ticket') }}">{{ icon('plus',18) }} New request</a>{% endif %}
+  <figure class="campus-photo"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Hamu_Mukasa_Library.jpg" alt="Hamu Mukasa Library, Uganda Christian University" width="712" height="536">
+  <figcaption>Hamu Mukasa Library · Mukono<br><a href="https://commons.wikimedia.org/wiki/File:Hamu_Mukasa_Library.jpg">Tamdra</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></figcaption></figure>
 </header>
 <section class="stats" aria-label="Request totals">
   {% for label, value, glyph, tone, status in [

@@ -18,6 +18,34 @@ class ServiceDeskTests(unittest.TestCase):
         }
         self.app = create_app(self.config)
         self.client = self.app.test_client()
+        account = self.app.test_cli_runner().invoke(
+            args=["create-staff", "staff@example.test", "--password", "test-staff-password"]
+        )
+        self.assertEqual(account.exit_code, 0)
+        self.assertEqual(self.login(self.client).status_code, 303)
+
+    def login(self, client, email="staff@example.test", password="test-staff-password"):
+        csrf = self.hidden(client.get("/sign-in"), "csrf")
+        return client.post("/sign-in", data={"csrf": csrf, "email": email, "password": password})
+
+    def test_authentication_and_sign_out(self):
+        visitor = self.app.test_client()
+        self.assertEqual(visitor.get("/").location, "/sign-in")
+        self.assertEqual(visitor.get("/requests/export.csv").location, "/sign-in")
+        self.assertEqual(self.login(visitor, password="incorrect").status_code, 401)
+        self.assertEqual(self.login(visitor).location, "/")
+        self.assertEqual(visitor.post("/sign-out").status_code, 400)
+        csrf = self.hidden(visitor.get("/"), "csrf")
+        self.assertEqual(visitor.post("/sign-out", data={"csrf": csrf}).location, "/sign-in")
+        self.assertEqual(visitor.get("/requests/new").location, "/sign-in")
+
+    def test_visitor_login_only_in_read_only_mode(self):
+        preview = create_app({**self.config, "READ_ONLY": True}).test_client()
+        self.assertEqual(self.login(preview, "visitor@campus.example", "MukonoDesk2026").status_code, 303)
+        self.assertIn(b"Sign out", preview.get("/").data)
+        self.assertEqual(preview.post("/requests/new").status_code, 403)
+        self.assertEqual(self.login(self.app.test_client(), "visitor@campus.example", "MukonoDesk2026").status_code, 401)
+
 
     def hidden(self, response, name):
         return re.search(fr'name="{name}" value="([^"]+)"', response.get_data(as_text=True))[1]
@@ -45,6 +73,7 @@ class ServiceDeskTests(unittest.TestCase):
         self.assertEqual(response.status_code, 303)
         self.assertEqual(response.location, "/requests/1")
         restarted = create_app(self.config).test_client()
+        self.login(restarted)
         self.assertIn(b"Request submitted.", restarted.get(response.location).data)
         self.assertIn(b"Broken lab monitor", restarted.get("/?q=csd-0001").data)
 
