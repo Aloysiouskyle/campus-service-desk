@@ -9,10 +9,7 @@ from PIL import Image, ImageFilter, ImageOps
 
 photos = Blueprint("photos", __name__)
 COMMONS = "https://upload.wikimedia.org/wikipedia/commons/"
-SOURCES = {
-    "hamu-mukasa": COMMONS + "c/c3/Hamu_Mukasa_Library.jpg",
-    "bishop-tucker": COMMONS + "6/61/The_Bishop_Tucker_Building_-_UCU_Mukono_05.jpg",
-}
+SOURCES = {"mukono-wide": COMMONS + "b/bd/The_Bishop_Tucker_Building_-_UCU_Mukono_06.jpg"}
 WIDTHS = (960, 1920, 3840)
 
 

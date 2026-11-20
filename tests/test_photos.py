@@ -15,10 +15,10 @@ class CampusPhotosTests(unittest.TestCase):
         rendition.cache_clear()
         self.addCleanup(rendition.cache_clear)
         with patch("campus_photos.urlopen", return_value=source), app.test_client() as client:
-            result = client.get("/assets/campus-photos/hamu-mukasa/3840.webp")
+            result = client.get("/assets/campus-photos/mukono-wide/3840.webp")
             self.assertEqual(result.mimetype, "image/webp")
             self.assertEqual(Image.open(BytesIO(result.data)).size, (3840, 2891))
-            cached = client.get("/assets/campus-photos/hamu-mukasa/3840.webp",
+            cached = client.get("/assets/campus-photos/mukono-wide/3840.webp",
                                 headers={"If-None-Match": result.headers["ETag"]})
             self.assertEqual(cached.status_code, 304)
             self.assertEqual(client.get("/assets/campus-photos/unknown/3840.webp").status_code, 404)

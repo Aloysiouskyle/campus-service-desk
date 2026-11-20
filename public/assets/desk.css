@@ -285,3 +285,53 @@ h1 { font-weight: 500; }
   .campus-hero .campus-photo figcaption { inset: 10px 10px auto auto; }
   .login-layout { padding: 120px 14px 75px; }
 }
+
+/* One continuous campus scene, with refraction confined to the UI surfaces. */
+.dashboard-scene, .login-page {
+  --glass: rgb(250 251 246 / 89%);
+  --rim: rgb(255 255 255 / 78%);
+  --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 65%), 0 10px 32px rgb(15 28 28 / 16%);
+}
+[data-theme="dark"] :is(.dashboard-scene,.login-page) {
+  --glass: rgb(23 36 37 / 90%);
+  --rim: rgb(209 234 225 / 30%);
+}
+.dashboard-scene { isolation: isolate; }
+.dashboard-scene main > .campus-photo {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+}
+.dashboard-scene main > .campus-photo figcaption {
+  top: 74px; bottom: auto; right: 18px; pointer-events: auto;
+}
+.dashboard-scene .campus-hero {
+  background: transparent; border: 0; isolation: auto; overflow: visible;
+  min-height: clamp(310px, 36vw, 490px);
+}
+.dashboard-scene .campus-hero .hero-copy { margin-left: 0; }
+.login-layout { justify-content: center; }
+.login-layout .login-photo img, .dashboard-scene main > .campus-photo img {
+  object-position: 50% 50%;
+}
+.login-layout .login-photo::after, .dashboard-scene main > .campus-photo::after {
+  content: ""; position: absolute; inset: 0; background: rgb(9 24 30 / 17%); pointer-events: none;
+}
+.campus-photo figcaption { z-index: 1; }
+.dashboard-scene .campus-hero .hero-copy, .dashboard-scene .stat,
+.dashboard-scene .topbar, .dashboard-scene .request-list, .login-page .login-form {
+  background: var(--glass); border: 1px solid var(--rim);
+  border-radius: 18px; box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(12px) saturate(120%); backdrop-filter: blur(12px) saturate(120%);
+}
+.dashboard-scene .topbar { border-radius: 0; }
+@keyframes campus-reveal { from { transform: scale(1.018); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-scene main > .campus-photo img, .login-layout .login-photo img {
+    animation: campus-reveal 1500ms ease-out both;
+  }
+  .login-form { animation: desk-enter 400ms ease-out both; }
+}
+@media (max-width: 620px) {
+  .dashboard-scene main > .campus-photo figcaption { top: auto; bottom: 6px; right: 6px; }
+  .dashboard-scene main { padding-bottom: 72px; }
+  .login-layout { padding: 72px 16px; }
+}
