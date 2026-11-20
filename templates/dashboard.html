@@ -11,7 +11,7 @@
     <h1>Request dashboard</h1>
     <p>{{ 'Explore the campus queue, follow a request, or export a report.' if read_only else 'Triage new requests and follow up on work across campus.' }}</p>
     {% if not read_only %}<a class="button primary" href="{{ url_for('create_ticket') }}">{{ icon('plus',18) }} New request</a>
-    {% else %}<a class="hero-action" href="#request-list">Browse requests ↓</a>{% endif %}
+    {% else %}<a class="button primary" href="{{ url_for('demo') }}">Try the demo {{ icon('arrow',17) }}</a>{% endif %}
   </div>
 
 </header>

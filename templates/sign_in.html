@@ -19,7 +19,7 @@
         <button class="button primary">Sign in {{ icon('arrow',17) }}</button>
       </form>
       {% if read_only %}<div class="visitor"><strong>Visitor account</strong><div>Email · <code>{{ demo_email }}</code></div><div>Password · <code>{{ demo_password }}</code></div></div>
-      <a class="text-link" href="{{ url_for('dashboard') }}">Browse as a guest →</a>{% endif %}
+      <a class="text-link" href="{{ url_for('demo') }}">Try the interactive demo →</a>{% endif %}
     </div>
   </section>
   <figure class="login-photo campus-photo"><img src="/assets/campus-photos/mukono-wide/3840.webp"

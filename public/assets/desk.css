@@ -335,3 +335,11 @@ h1 { font-weight: 500; }
   .dashboard-scene main { padding-bottom: 72px; }
   .login-layout { padding: 72px 16px; }
 }
+
+.demo-list { list-style: none; padding: 0; margin-block: 12px 20px; }
+.demo-list li { border-bottom: 1px solid var(--line); }
+.demo-list a { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 2px; }
+.demo-list a:hover strong { text-decoration: underline; }
+.demo-list small { display: block; color: var(--muted); }
+#demo-description { margin: 14px 0 22px; }
+#demo-new > h2 { margin-bottom: 12px; }

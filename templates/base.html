@@ -42,12 +42,15 @@
   </a>
   <nav aria-label="Workspace">
     <div class="nav-title">WORKSPACE</div>
-    <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}aria-current="page"{% endif %}>{{ icon('grid',17) }} Requests</a>
-    {% if not read_only %}
+    <a href="{{ '#queue' if request.endpoint == 'demo' else url_for('dashboard') }}" {% if request.endpoint in ('dashboard', 'demo') %}aria-current="page"{% endif %}>{{ icon('grid',17) }} Requests</a>
+    {% if request.endpoint == 'demo' %}
+    <a href="#new">{{ icon('plus',17) }} New request</a>
+    <a href="{{ url_for('dashboard') }}">{{ icon('back',17) }} Exit demo</a>
+    {% elif not read_only %}
     <a href="{{ url_for('create_ticket') }}" {% if request.endpoint == 'create_ticket' %}aria-current="page"{% endif %}>{{ icon('plus',17) }} New request</a>
     {% endif %}
   </nav>
-  <div class="sidebar-foot"><span class="mode-dot"></span> {{ 'Read-only preview' if read_only else 'Demo workspace' }}</div>
+  <div class="sidebar-foot"><span class="mode-dot"></span> {{ 'Private demo' if request.endpoint == 'demo' else 'Read-only preview' if read_only else 'Demo workspace' }}</div>
 </aside>
 <div class="workspace">
   <header class="topbar"><span>Service desk</span><span class="crumb">/</span><strong>{% block breadcrumb %}Requests{% endblock %}</strong>

@@ -4,7 +4,7 @@ A campus help-desk application for reporting everyday issues, tracking each requ
 
 **[Open the live portfolio preview](https://campus-service-desk-six.vercel.app)**
 
-The preview includes 12 fictional tickets across five campus service categories. To try submission and status updates with persistent storage, run the full app locally.
+The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to create requests, update statuses, and inspect the history in a private copy of that queue. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local staff app uses persistent SQLite storage.
 
 ## Try it locally
 
@@ -76,7 +76,7 @@ The suite covers ticket creation and restart persistence, input validation, stat
 
 Local staff sign in to a shared queue. Staff passwords are stored as salted hashes. A signed session cookie identifies the signed-in user. Set a stable random CSD_SECRET_KEY for shared deployments. The public visitor account is available only in the read-only preview. Use fictional request details.
 
-On Vercel, the app uses an in-memory SQLite database seeded with the same fictional records on each request. This makes the public preview repeatable across serverless instances. Visitors can browse, filter, inspect ticket history, and download CSV. The preview disables ticket submission and status updates. To preview the same mode locally, set `CSD_READ_ONLY=1` before starting Flask.
+On Vercel, the app uses an in-memory SQLite database seeded with the same fictional records on each request. This makes the public preview repeatable across serverless instances. Visitors can browse, filter, inspect ticket history, and download CSV. The shared preview stays read-only. The interactive demo edits a tab-local copy of the seed tickets, using the same status transitions as the staff workflow. To preview the same mode locally, set `CSD_READ_ONLY=1` before starting Flask.
 
 ## Campus photography
 

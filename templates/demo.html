@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Interactive demo{% endblock %}
+{% block breadcrumb %}Interactive demo{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>Interactive demo</h1>
+  <p>Try the service desk with fictional requests. Changes stay in this tab through refresh and reset when you end the tab session or select Reset demo.</p>
+</header>
+<p id="demo-message" role="status"></p>
+<noscript><p class="notice">Enable JavaScript to use the interactive workspace.</p></noscript>
+<section id="demo-queue" class="panel padded" hidden>
+  <div class="panel-head"><h2>My demo queue</h2><a class="button primary" href="#new">{{ icon('plus',17) }} New request</a></div>
+  <label for="demo-search">Find a request</label>
+  <input id="demo-search" type="search" placeholder="Search by title or reference">
+  <ul id="demo-list" class="demo-list"></ul>
+  <button id="demo-reset" class="button outline" type="button">Reset demo</button>
+</section>
+<section id="demo-new" hidden>
+  <a href="#queue" class="back text-link">← My demo queue</a>
+  <h2>New request</h2>
+  <form id="demo-submit" class="panel form-panel">
+    {% with data={}, errors={} %}{% include "request_fields.html" %}{% endwith %}
+    <div class="form-actions"><a class="button outline" href="#queue">Cancel</a><button class="button primary">Submit request</button></div>
+  </form>
+</section>
+<section id="demo-detail" hidden>
+  <a href="#queue" class="back text-link">← My demo queue</a>
+  <div class="detail-grid"><div class="panel padded">
+    <p id="demo-reference" class="eyebrow"></p><h2 id="demo-title"></h2>
+    <p id="demo-meta" class="muted"></p><p id="demo-description" class="description"></p>
+    <h3>Activity history</h3><ol class="timeline" id="demo-history"></ol>
+  </div>
+  <form class="panel padded status-panel" id="demo-update">
+    <h2>Request status</h2><p id="demo-current"></p>
+    <label for="demo-status">Move to</label><select id="demo-status" name="status" required></select>
+    <label for="demo-note">Note (optional)</label><textarea id="demo-note" name="note" maxlength="500" rows="3"></textarea>
+    <button class="button primary">Update status</button>
+  </form></div>
+</section>
+<script type="application/json" id="demo-seed">{{ seed|tojson }}</script>
+<script type="application/json" id="demo-transitions">{{ transitions|tojson }}</script>
+<script src="/assets/demo.js" defer></script>
+{% endblock %}

@@ -7,25 +7,7 @@
 <form class="panel form-panel" method="post">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   {% if errors %}<p class="notice error" role="alert">Check the highlighted fields and submit again.</p>{% endif %}
-  <label for="title">Request title</label>
-  <input id="title" name="title" value="{{ data.get('title', '') }}" required minlength="5" maxlength="120" placeholder="e.g. Wi-Fi drops in the main library" {% if errors.title %}aria-invalid="true" aria-describedby="title-error"{% endif %}>
-  {% if errors.title %}<p class="field-error" id="title-error">{{ errors.title }}</p>{% endif %}
-  <div class="columns">
-    {% for key, label, choices in [('category', 'Category', categories), ('priority', 'Priority', priorities)] %}
-    <div>
-      <label for="{{ key }}">{{ label }}</label>
-      <select id="{{ key }}" name="{{ key }}" required {% if errors[key] %}aria-invalid="true" aria-describedby="{{ key }}-error"{% endif %}>
-        <option value="">Choose {{ label|lower }}</option>
-        {% for choice in choices %}<option {% if choice == data.get(key, 'Normal' if key == 'priority' else '') %}selected{% endif %}>{{ choice }}</option>{% endfor %}
-      </select>
-      {% if errors[key] %}<p class="field-error" id="{{ key }}-error">{{ errors[key] }}</p>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
-  <label for="description">Description</label>
-  <textarea id="description" name="description" required minlength="10" maxlength="2000" rows="6" aria-describedby="description-help{% if errors.description %} description-error{% endif %}" {% if errors.description %}aria-invalid="true"{% endif %} placeholder="Include the location, when the issue started, and what you have already tried.">{{ data.get('description', '') }}</textarea>
-  <div class="field-meta"><span id="description-help">Use fictional details in this demo.</span><span data-count-for="description"></span></div>
-  {% if errors.description %}<p class="field-error" id="description-error">{{ errors.description }}</p>{% endif %}
+  {% include "request_fields.html" %}
   <div class="form-actions"><a class="button outline" href="{{ url_for('dashboard') }}">Cancel</a><button class="button primary">Submit request {{ icon('arrow',17) }}</button></div>
 </form>
 {% endblock %}

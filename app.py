@@ -158,6 +158,19 @@ def create_app(config=None):
             "priority": request.args.get("priority", ""),
         }
 
+    @app.get("/demo")
+    def demo():
+        if not app.config["READ_ONLY"]:
+            return redirect(url_for("dashboard"))
+        db = database()
+        tickets = [dict(row) for row in db.execute("SELECT * FROM tickets ORDER BY id DESC")]
+        by_id = {ticket["id"]: ticket for ticket in tickets}
+        for ticket in tickets:
+            ticket["history"] = []
+        for event in db.execute("SELECT * FROM events ORDER BY id DESC"):
+            by_id[event["ticket_id"]]["history"].append(dict(event))
+        return render_template("demo.html", seed=tickets, transitions=desk.TRANSITIONS)
+
     @app.get("/")
     def dashboard():
         db = database()
