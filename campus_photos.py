@@ -36,7 +36,7 @@ def rendition(name, width):
         return render_photo(BytesIO(source.read()), width)
 
 
-@photos.get("/campus-photos/<name>/<int:width>.webp")
+@photos.get("/assets/campus-photos/<name>/<int:width>.webp")
 def photo(name, width):
     if name not in SOURCES or width not in WIDTHS:
         abort(404)

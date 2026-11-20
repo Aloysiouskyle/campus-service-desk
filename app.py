@@ -22,7 +22,8 @@ from campus_photos import photos
 
 def create_app(config=None):
     app = Flask(__name__, static_folder="public/assets", static_url_path="/assets")
-    app.register_blueprint(photos)
+    if os.environ.get("VERCEL") != "1":
+        app.register_blueprint(photos)
     app.config.from_mapping(
         DATABASE=os.environ.get("CSD_DATABASE", str(Path(app.instance_path) / "desk.sqlite3")),
         SECRET_KEY=os.environ.get("CSD_SECRET_KEY") or secrets.token_hex(32),
