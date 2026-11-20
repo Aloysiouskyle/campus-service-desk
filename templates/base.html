@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142a26">
+  <meta name="description" content="Submit and track campus support requests from one dashboard.">
+  <title>{% block title %}Requests{% endblock %} · Campus Service Desk</title>
+  <link rel="stylesheet" href="/assets/desk.css">
+  <script src="/assets/desk.js" defer></script>
+</head>
+<body>
+{% macro icon(name, size=20) -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'campus' %}<path d="m3 9 9-5 9 5H3Zm2 11h14M7 12v5m5-5v5m5-5v5M3 20h18"/>
+{% elif name == 'grid' %}<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+{% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{% elif name == 'inbox' %}<path d="M4 4h16l2 10v6H2v-6L4 4Z M2 14h6l2 3h4l2-3h6"/>
+{% elif name == 'open' %}<circle cx="12" cy="12" r="8"/><path d="M12 11v5m0-8h.01"/>
+{% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{% elif name == 'check' %}<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>
+{% elif name == 'download' %}<path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/>
+{% elif name == 'search' %}<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>
+{% elif name == 'arrow' %}<path d="M5 12h14m-5-5 5 5-5 5"/>
+{% elif name == 'back' %}<path d="M19 12H5m5-5-5 5 5 5"/>
+{% endif %}
+</svg>
+{%- endmacro %}
+<a href="#main" class="skip">Skip to content</a>
+<aside class="sidebar">
+  <a class="brand" href="{{ url_for('dashboard') }}">
+    <span class="brand-icon">{{ icon('campus', 23) }}</span>
+    <span>Campus<span class="brand-sub">SERVICE DESK</span></span>
+  </a>
+  <nav aria-label="Workspace">
+    <div class="nav-title">WORKSPACE</div>
+    <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}aria-current="page"{% endif %}>{{ icon('grid',17) }} Requests</a>
+    {% if not read_only %}
+    <a href="{{ url_for('create_ticket') }}" {% if request.endpoint == 'create_ticket' %}aria-current="page"{% endif %}>{{ icon('plus',17) }} New request</a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-foot"><span class="mode-dot"></span> {{ 'Read-only preview' if read_only else 'Demo workspace' }}</div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><span>Service desk</span><span class="crumb">/</span><strong>{% block breadcrumb %}Requests{% endblock %}</strong></header>
+  <main id="main">
+    {% if read_only %}<p class="notice">Portfolio preview · Browse and export sample requests. Run locally to submit or update them.</p>{% endif %}
+    {% for message in get_flashed_messages() %}<p role="status" class="notice success">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>
