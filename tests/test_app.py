@@ -148,6 +148,17 @@ class ServiceDeskTests(unittest.TestCase):
         self.assertIn(b"Showing 1 of 1 request", alicia.get("/").data)
         self.assertEqual(alicia.get("/requests/2").status_code, 404)
         self.assertEqual(daniel.get("/requests/1").status_code, 404)
+        conversation = "/requests/1/messages"
+        for client, reply in [(self.client, "Which printer?"), (alicia, "<b>Beside workstation 12</b>")]:
+            token = self.hidden(client.get("/requests/1"), "csrf")
+            self.assertEqual(client.post(conversation, data={"body": reply, "csrf": token}).location,
+                             "/requests/1#conversation")
+        token = self.hidden(daniel.get("/"), "csrf")
+        self.assertEqual(daniel.post(conversation, data={"body": "Wrong ticket", "csrf": token}).status_code, 404)
+        page = alicia.get("/requests/1").get_data(as_text=True)
+        self.assertLess(page.index("Which printer?"), page.index("&lt;b&gt;Beside workstation 12&lt;/b&gt;"))
+        self.assertIn("alicia@example.test</strong> · Student", page)
+        self.assertNotIn("Wrong ticket", page)
         own_ticket = alicia.get("/requests/1")
         self.assertNotIn(b"Update status", own_ticket.data)
         self.assertEqual(alicia.post("/requests/1/status", data={
@@ -254,6 +265,7 @@ class ServiceDeskTests(unittest.TestCase):
         self.assertEqual(preview.post("/requests/new").status_code, 403)
         self.assertEqual(preview.post("/requests/1/status").status_code, 403)
         self.assertEqual(preview.post("/requests/1/claim").status_code, 403)
+        self.assertEqual(preview.post("/requests/1/messages").status_code, 403)
         with preview.get("/assets/desk.css") as stylesheet:
             self.assertEqual(stylesheet.status_code, 200)
 

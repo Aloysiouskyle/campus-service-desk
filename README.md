@@ -4,7 +4,7 @@ A campus help-desk application for reporting everyday issues, tracking each requ
 
 **[Open the live portfolio preview](https://campus-service-desk-six.vercel.app)**
 
-The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to submit a request in **Student** view. Select **Staff** on that ticket, choose **Assign to me**, move it to **In progress**, and add a note. Switch back to **Student** to see the response. Staff can see all demo tickets. Students see their own tickets. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local app uses persistent SQLite storage.
+The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to submit a request in **Student** view. Select **Staff** on that ticket, choose **Assign to me**, move it to **In progress**, and add a note. Send a message in **Conversation**, then switch back to **Student** to read it and reply. Staff can see all demo tickets. Students see their own tickets. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local app uses persistent SQLite storage.
 
 ## Try it locally
 
@@ -47,7 +47,7 @@ flowchart TD
 
 When you submit a request, Flask checks the form and asks SQLite to save the ticket and its first history entry together. Flask then redirects you to the ticket page. On that page, the app reads the ticket and its history from SQLite and inserts them into an HTML template.
 
-SQLite has three tables. **accounts** stores each login and its student or staff role. **tickets** holds the current state of each request and links it to the account that submitted it. **events** holds its submission and status changes, with many events linked to one ticket. The local database is a file at `instance/desk.sqlite3`, so requests survive application restarts. Set `CSD_DATABASE` to use a different file.
+SQLite has four tables. **messages** stores each ticket’s conversation, including the author and timestamp. **accounts** stores each login and its student or staff role. **tickets** holds the current state of each request and links it to the account that submitted it. **events** holds its submission and status changes, with many events linked to one ticket. The local database is a file at `instance/desk.sqlite3`, so requests survive application restarts. Set `CSD_DATABASE` to use a different file.
 
 | Path | Job |
 | --- | --- |

@@ -236,7 +236,7 @@ def create_app(config=None):
                 return redirect(url_for("detail", ticket_id=ticket_id), code=303)
         return render_template("new.html", data=data, errors=errors), 422 if errors else 200
 
-    def render_detail(ticket_id, error=None, code=200):
+    def render_detail(ticket_id, error=None, code=200, message_error=None, draft=""):
         db = database()
         # Use one read snapshot so the status and history always match.
         with db:
@@ -247,12 +247,35 @@ def create_app(config=None):
             history = db.execute(
                 "SELECT * FROM events WHERE ticket_id = ? ORDER BY id DESC", (ticket_id,),
             ).fetchall()
-        return render_template("detail.html", ticket=ticket, history=history,
+            messages = db.execute(
+                "SELECT * FROM messages WHERE ticket_id = ? ORDER BY id", (ticket_id,),
+            ).fetchall()
+        return render_template("detail.html", ticket=ticket, history=history, messages=messages,
+                               message_error=message_error, draft=draft,
                                transitions=desk.TRANSITIONS[ticket["status"]], error=error), code
 
     @app.get("/requests/<int:ticket_id>")
     def detail(ticket_id):
         return render_detail(ticket_id)
+
+    @app.post("/requests/<int:ticket_id>/messages")
+    def post_message(ticket_id):
+        body = request.form.get("body", "").strip()
+        if not 1 <= len(body) <= 2000:
+            return render_detail(ticket_id, code=422, draft=body,
+                                 message_error="Enter a message between 1 and 2,000 characters.")
+        db = database()
+        with db:
+            # Check access in the same statement that saves the message.
+            added = db.execute(
+                """INSERT INTO messages(ticket_id, author_email, author_role, body, created_at)
+                   SELECT id, ?, ?, ?, ? FROM tickets
+                   WHERE id = ? AND (? IS NULL OR owner_email = ?)""",
+                (session["email"], g.role, body, desk.timestamp(), ticket_id, student_owner(), student_owner()),
+            ).rowcount
+        if not added:
+            abort(404)
+        return redirect(url_for("detail", ticket_id=ticket_id, _anchor="conversation"), code=303)
 
     @app.post("/requests/<int:ticket_id>/claim")
     def claim(ticket_id):

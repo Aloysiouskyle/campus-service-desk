@@ -96,6 +96,15 @@
     get("demo-update").reset();
     get("demo-status").replaceChildren(new Option("Choose a status", ""),
       ...transitions[ticket.status].map((status) => new Option(status)));
+    const messages = (ticket.messages ?? []).map((message) => {
+      const item = element("li", "");
+      const time = element("time", new Date(message.createdAt).toLocaleString());
+      time.dateTime = message.createdAt;
+      item.append(element("strong", message.author), time, element("p", message.body));
+      return item;
+    });
+    get("demo-messages").replaceChildren(...(messages.length ? messages : [element("li", "No messages yet.", "muted")]));
+    get("demo-message-form").reset();
     get("demo-history").replaceChildren(...ticket.history.map((event) => {
       const item = document.createElement("li");
       const time = element("time", new Date(event.created_at).toLocaleString());
@@ -156,6 +165,24 @@
     get("demo-search").value = "";
     announce(reference(id) + " submitted.");
     location.hash = "ticket-" + id;
+  });
+  get("demo-message-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const body = get("demo-message-body").value.trim();
+    if (!selected || !body || body.length > 2000) {
+      announce("Enter a message between 1 and 2,000 characters.");
+      return;
+    }
+    const message = {
+      author: role === "staff" ? demoStaff + " · Staff" : "Student",
+      body,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = { ...selected, messages: [...(selected.messages ?? []), message] };
+    if (!save(tickets.map((ticket) => ticket.id === selected.id ? updated : ticket))) return;
+    announce("Message sent.");
+    render();
+    get("demo-message-body").focus();
   });
   get("demo-update").addEventListener("submit", (event) => {
     event.preventDefault();

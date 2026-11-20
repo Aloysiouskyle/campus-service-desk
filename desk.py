@@ -37,6 +37,15 @@ CREATE TABLE IF NOT EXISTS events (
     note TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(id),
+    author_email TEXT NOT NULL REFERENCES accounts(email),
+    author_role TEXT NOT NULL CHECK (author_role IN ('student', 'staff')),
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS messages_by_ticket ON messages(ticket_id, id);
 CREATE INDEX IF NOT EXISTS events_by_ticket ON events(ticket_id, id);
 """
 

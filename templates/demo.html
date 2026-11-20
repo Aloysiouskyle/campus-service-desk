@@ -40,6 +40,15 @@
   <div class="detail-grid"><div class="panel padded">
     <p id="demo-reference" class="eyebrow"></p><h2 id="demo-title"></h2>
     <p id="demo-meta" class="muted"></p><p id="demo-description" class="description"></p>
+    <section class="conversation">
+      <h3>Conversation</h3>
+      <ol class="message-list" id="demo-messages"></ol>
+      <form id="demo-message-form">
+        <label for="demo-message-body">Message</label>
+        <textarea id="demo-message-body" required maxlength="2000" rows="3"></textarea>
+        <button class="button primary">Send message</button>
+      </form>
+    </section>
     <h3>Activity history</h3><ol class="timeline" id="demo-history"></ol>
   </div>
   <section class="panel padded status-panel">

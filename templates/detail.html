@@ -20,6 +20,28 @@
       </dl>
       <h3>Description</h3><p class="description">{{ ticket.description }}</p>
     </section>
+    {% if not read_only %}
+    <section class="panel padded conversation" id="conversation">
+      <h2>Conversation</h2>
+      <ol class="message-list">
+        {% for message in messages %}
+        <li>
+          <div><strong>{{ message.author_email }}</strong> · {{ message.author_role|capitalize }}
+            <time datetime="{{ message.created_at }}">{{ message.created_at|date }} · {{ message.created_at[11:16] }} UTC</time>
+          </div>
+          <p>{{ message.body }}</p>
+        </li>
+        {% else %}<li class="muted">No messages yet.</li>{% endfor %}
+      </ol>
+      <form method="post" action="{{ url_for('post_message', ticket_id=ticket.id) }}#conversation">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        {% if message_error %}<p class="notice error" role="alert">{{ message_error }}</p>{% endif %}
+        <label for="message-body">Message</label>
+        <textarea id="message-body" name="body" required maxlength="2000" rows="3">{{ draft }}</textarea>
+        <button class="button primary">Send message</button>
+      </form>
+    </section>
+    {% endif %}
     <section class="panel padded">
       <h2>Activity history</h2>
       <ol class="timeline">
