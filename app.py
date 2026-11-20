@@ -17,10 +17,12 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import desk
+from campus_photos import photos
 
 
 def create_app(config=None):
     app = Flask(__name__, static_folder="public/assets", static_url_path="/assets")
+    app.register_blueprint(photos)
     app.config.from_mapping(
         DATABASE=os.environ.get("CSD_DATABASE", str(Path(app.instance_path) / "desk.sqlite3")),
         SECRET_KEY=os.environ.get("CSD_SECRET_KEY") or secrets.token_hex(32),
@@ -126,7 +128,7 @@ def create_app(config=None):
                 abort(400, "The form expired. Reload the page and try again.")
 
         if (not app.config["READ_ONLY"] and not session.get("email")
-                and request.endpoint not in {"sign_in", "static", None}):
+                and request.endpoint not in {"sign_in", "static", "photos.photo", None}):
             return redirect(url_for("sign_in"), code=303)
 
     @app.context_processor
