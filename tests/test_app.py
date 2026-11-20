@@ -4,7 +4,9 @@ import re
 import sqlite3
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 from werkzeug.security import generate_password_hash
 
@@ -153,8 +155,57 @@ class ServiceDeskTests(unittest.TestCase):
             "status": "In progress",
         }).status_code, 403)
         self.assertIn(b"Showing 2 of 2 requests", self.client.get("/").data)
+        self.assertEqual(alicia.post("/requests/1/claim", data={"csrf": self.hidden(own_ticket, "csrf")}).status_code, 403)
+        self.assertEqual(self.client.post("/requests/1/claim").status_code, 400)
+        staff_token = self.hidden(self.client.get("/requests/1"), "csrf")
+        self.assertEqual(self.client.post("/requests/1/claim", data={"csrf": staff_token}).status_code, 303)
+        student_page = alicia.get("/requests/1").data
+        self.assertIn(b"Assigned to staff@example.test.", student_page)
+        self.assertNotIn(b"Assign to me", student_page)
         self.assertEqual(self.update("In progress").status_code, 303)
         self.assertIn(b"Confirmed by lab support.", alicia.get("/requests/1").data)
+
+    def test_concurrent_staff_claims_record_one_winner_and_one_history_entry(self):
+        self.submit()
+        self.submit(title="Another broken monitor")
+        second_email = "second@example.test"
+        result = self.app.test_cli_runner().invoke(
+            args=["create-staff", second_email, "--password", "test-staff-password"])
+        self.assertEqual(result.exit_code, 0)
+        other = self.app.test_client()
+        self.assertEqual(self.login(other, second_email).status_code, 303)
+        clients = [self.client, other]
+        emails = ["staff@example.test", second_email]
+        forms = [{"csrf": self.hidden(client.get("/requests/1"), "csrf")} for client in clients]
+        start = Barrier(2)
+
+        def claim(index):
+            start.wait(timeout=5)
+            return clients[index].post("/requests/1/claim", data=forms[index])
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            responses = list(pool.map(claim, range(2)))
+        codes = [response.status_code for response in responses]
+        self.assertCountEqual(codes, [303, 409])
+        winner, loser = codes.index(303), codes.index(409)
+        self.assertIn(emails[winner].encode(), responses[loser].data)
+        self.assertIn(b"Another staff member claimed", responses[loser].data)
+        retry = clients[winner].post("/requests/1/claim", data=forms[winner])
+        self.assertEqual(retry.status_code, 303)
+        with sqlite3.connect(self.config["DATABASE"]) as db:
+            self.assertEqual(db.execute("SELECT assignee_email, status FROM tickets WHERE id=1").fetchone(),
+                             (emails[winner], "Open"))
+            self.assertEqual(db.execute("SELECT count(*) FROM events WHERE ticket_id=1").fetchone()[0], 2)
+        for assignment, expected in [(emails[winner], ["CSD-0001"]), (emails[loser], []),
+                                     ("unassigned", ["CSD-0002"])]:
+            query = {"assignee": assignment, "q": "monitor", "status": "Open"}
+            page = other.get("/", query_string=query).data
+            self.assertIn(f"Showing {len(expected)} of 2".encode(), page)
+            export = other.get("/requests/export.csv", query_string=query)
+            rows = list(csv.DictReader(io.StringIO(export.data.decode("utf-8-sig"))))
+            self.assertEqual([row["Reference"] for row in rows], expected)
+            if rows:
+                self.assertEqual(rows[0]["Assigned to"], "Unassigned" if assignment == "unassigned" else assignment)
 
     def test_existing_staff_login_and_ticket_survive_schema_upgrade(self):
         legacy_path = str(Path(self.config["DATABASE"]).with_name("old.sqlite3"))
@@ -202,6 +253,7 @@ class ServiceDeskTests(unittest.TestCase):
         self.assertEqual(preview.get("/requests/export.csv").status_code, 200)
         self.assertEqual(preview.post("/requests/new").status_code, 403)
         self.assertEqual(preview.post("/requests/1/status").status_code, 403)
+        self.assertEqual(preview.post("/requests/1/claim").status_code, 403)
         with preview.get("/assets/desk.css") as stylesheet:
             self.assertEqual(stylesheet.status_code, 200)
 

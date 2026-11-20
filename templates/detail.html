@@ -12,6 +12,7 @@
     <section class="panel padded">
       <h2>Request details</h2>
       <dl class="metadata">
+        <div><dt>Assigned to</dt><dd>{{ ticket.assignee_email or 'Unassigned' }}</dd></div>
         <div><dt>Category</dt><dd>{{ ticket.category }}</dd></div>
         <div><dt>Priority</dt><dd><span class="priority {{ ticket.priority|slug }}">{{ ticket.priority }}</span></dd></div>
         <div><dt>Submitted</dt><dd><time datetime="{{ ticket.created_at }}">{{ ticket.created_at|date }}</time></dd></div>
@@ -30,6 +31,12 @@
     <h2>Request status</h2>
     <p><span class="pill {{ ticket.status|slug }}">{{ ticket.status }}</span></p>
     {% if not read_only and not student_view %}
+    {% if not ticket.assignee_email %}
+    <form method="post" action="{{ url_for('claim', ticket_id=ticket.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="button outline">Assign to me</button>
+    </form>
+    {% endif %}
     <form method="post" action="{{ url_for('update_status', ticket_id=ticket.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="version" value="{{ history[0].id }}">

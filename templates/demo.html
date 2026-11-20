@@ -17,6 +17,13 @@
   <div class="panel-head"><h2 id="demo-queue-title">My requests</h2><a class="button primary" href="#new">{{ icon('plus',17) }} New request</a></div>
   <label for="demo-search">Find a request</label>
   <input id="demo-search" type="search" placeholder="Search by title or reference">
+  <div id="demo-assignment-filter" hidden>
+    <label for="demo-assignment">Assignment</label>
+    <select id="demo-assignment">
+      <option value="">All assignments</option><option value="unassigned">Unassigned</option>
+      <option value="mine">My assigned requests</option>
+    </select>
+  </div>
   <ul id="demo-list" class="demo-list"></ul>
   <button id="demo-reset" class="button outline" type="button">Reset demo</button>
 </section>
@@ -37,6 +44,8 @@
   </div>
   <section class="panel padded status-panel">
     <h2>Request status</h2><p id="demo-current"></p>
+    <p>Assigned to <strong id="demo-assignee"></strong></p>
+    <button type="button" id="demo-claim" class="button outline" hidden>Assign to me</button>
     <form id="demo-update" hidden>
     <label for="demo-status">Move to</label><select id="demo-status" name="status" required></select>
     <label for="demo-note">Note (optional)</label><textarea id="demo-note" name="note" maxlength="500" rows="3"></textarea>

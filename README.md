@@ -4,7 +4,7 @@ A campus help-desk application for reporting everyday issues, tracking each requ
 
 **[Open the live portfolio preview](https://campus-service-desk-six.vercel.app)**
 
-The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to submit a request in **Student** view. Select **Staff** on that ticket, move it to **In progress**, and add a note. Switch back to **Student** to see the response. Staff can see all demo tickets. Students see their own tickets. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local app uses persistent SQLite storage.
+The preview includes 12 fictional tickets across five campus service categories. Choose **[Try the demo](https://campus-service-desk-six.vercel.app/demo)** to submit a request in **Student** view. Select **Staff** on that ticket, choose **Assign to me**, move it to **In progress**, and add a note. Switch back to **Student** to see the response. Staff can see all demo tickets. Students see their own tickets. Changes are kept in the current tab’s session storage and survive refresh. Reset the demo to restore the sample queue. The local app uses persistent SQLite storage.
 
 ## Try it locally
 
@@ -32,8 +32,8 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000). Skip the seed command to st
 
 1. Sign in as the student and submit a request titled **Broken keyboard in Lab 3** under **IT Support** with a short description.
 2. Copy its tracking reference, return to the dashboard, and search for it.
-3. Sign in as staff, open the request, move it to **In progress**, and add a note. Resolve it and check that both updates appear in the history.
-4. Filter the dashboard by **Resolved** and export the matching requests as CSV. Sign back in as the student to read the update.
+3. Sign in as staff, open the request, choose **Assign to me**, move it to **In progress**, and add a note. Resolve it and check that both updates appear in the history.
+4. Filter the dashboard by **My assigned requests** and **Resolved** and export the matching requests as CSV. Sign back in as the student to read the update.
 
 ## How it works
 
@@ -61,6 +61,8 @@ SQLite has three tables. **accounts** stores each login and its student or staff
 ### Engineering decisions
 
 - **Status changes leave a history.** Open requests can move to In progress, and in-progress requests can be resolved or sent back to Open. Resolved requests can be reopened. Each change updates the ticket and adds an event in one transaction.
+- **Each ticket has one assignee.** SQLite assigns it only if the assignee is still empty. The first claim and its history entry are saved together. The other staff member sees who got the ticket. Repeating your own claim creates no extra entry. Assigning a ticket keeps its current status.
+- **The assignee is visible to the student.** The signed-in app identifies staff by their account email. The public demo uses Grace Namuli as its fictional staff member.
 - **Stale pages cannot overwrite newer changes.** Each status form carries the latest event ID. If another update already happened, Flask shows the newer history and asks the visitor to review it.
 - **Exports match the dashboard.** Both screens use the same query for title or reference search and for status, category, and priority filters. CSV cells that could be interpreted as formulas are prefixed with an apostrophe.
 - **Core actions work through HTML forms.** JavaScript adds the character counter and copy button. Submission, filtering, status updates, and download are handled by Flask.
@@ -71,7 +73,7 @@ SQLite has three tables. **accounts** stores each login and its student or staff
 python -m unittest discover -s tests -v
 ```
 
-The suite covers ticket creation and restart persistence, input validation, status transitions and history, stale updates, shared filters and CSV output, HTML escaping, form-token checks, sample data, student ownership across the dashboard, detail and CSV routes, staff-only updates, database upgrades, and the hosted preview's write restrictions.
+The suite covers ticket creation and restart persistence, input validation, status transitions and history, stale updates, shared filters and CSV output, HTML escaping, form-token checks, sample data, student ownership across the dashboard, detail and CSV routes, staff-only updates, concurrent claims, assignment filters, database upgrades, and the hosted preview's write restrictions.
 
 ## Deployment and scope
 

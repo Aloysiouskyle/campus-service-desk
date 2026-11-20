@@ -174,6 +174,7 @@ def create_app(config=None):
 
     def current_filters():
         return {
+            "assignee": request.args.get("assignee", "") if g.role == "staff" else "",
             "q": request.args.get("q", "").strip()[:120],
             "status": request.args.get("status", ""),
             "category": request.args.get("category", ""),
@@ -202,7 +203,13 @@ def create_app(config=None):
             "SELECT status, count(*) FROM tickets WHERE (? IS NULL OR owner_email = ?) GROUP BY status",
             (owner, owner),
         ).fetchall())
-        return render_template("dashboard.html", tickets=desk.matching_tickets(db, filters, owner),
+        other_assignees = []
+        if g.role == "staff":
+            other_assignees = [row[0] for row in db.execute(
+                "SELECT DISTINCT assignee_email FROM tickets WHERE assignee_email != ? ORDER BY assignee_email",
+                (session["email"],),
+            )]
+        return render_template("dashboard.html", other_assignees=other_assignees, tickets=desk.matching_tickets(db, filters, owner),
                                filters=filters, counts=counts, total=sum(counts.values()))
 
     @app.route("/requests/new", methods=["GET", "POST"])
@@ -247,6 +254,18 @@ def create_app(config=None):
     def detail(ticket_id):
         return render_detail(ticket_id)
 
+    @app.post("/requests/<int:ticket_id>/claim")
+    def claim(ticket_id):
+        if g.role != "staff":
+            abort(403, "Only staff can claim requests.")
+        result = desk.claim_ticket(database(), ticket_id, session["email"])
+        if result == 404:
+            abort(404)
+        if result == 409:
+            return render_detail(ticket_id, "Another staff member claimed this request. See Assigned to.", 409)
+        flash("This request is assigned to you.")
+        return redirect(url_for("detail", ticket_id=ticket_id), code=303)
+
     @app.post("/requests/<int:ticket_id>/status")
     def update_status(ticket_id):
         if g.role != "staff":
@@ -266,17 +285,19 @@ def create_app(config=None):
         flash("Request status updated.")
         return redirect(url_for("detail", ticket_id=ticket_id), code=303)
 
+    def csv_text(value):
+        if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n")):
+            return "'" + value
+        return value
+
     @app.get("/requests/export.csv")
     def export():
         buffer = io.StringIO(newline="")
         writer = csv.writer(buffer)
-        writer.writerow(["Reference", "Title", "Category", "Priority", "Status", "Created (UTC)"])
+        writer.writerow(["Reference", "Title", "Category", "Priority", "Status", "Created (UTC)", "Assigned to"])
         for ticket in desk.matching_tickets(database(), current_filters(), student_owner()):
-            title = ticket["title"]
-            if title.lstrip().startswith(("=", "+", "-", "@")) or title.startswith(("\t", "\r", "\n")):
-                title = "'" + title
-            writer.writerow([reference(ticket["id"]), title, ticket["category"], ticket["priority"],
-                             ticket["status"], ticket["created_at"]])
+            writer.writerow([reference(ticket["id"]), csv_text(ticket["title"]), ticket["category"], ticket["priority"],
+                             ticket["status"], ticket["created_at"], csv_text(ticket["assignee_email"] or "Unassigned")])
         return Response("\ufeff" + buffer.getvalue(), mimetype="text/csv",
                         headers={"Content-Disposition": 'attachment; filename="campus-requests.csv"'})
 

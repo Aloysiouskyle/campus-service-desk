@@ -8,6 +8,7 @@
   const views = ["queue", "new", "detail"];
   const reference = (id) => "CSD-" + String(id).padStart(4, "0");
   const roleKey = "campus-desk.demo-role";
+  const demoStaff = "Grace Namuli";
   const roles = document.querySelectorAll('input[name="demo-role"]');
   const studentSamples = new Set([4, 6, 12]);
   const sampleIds = new Set(seed.map((ticket) => ticket.id));
@@ -61,16 +62,20 @@
 
   function renderQueue() {
     get("demo-queue-title").textContent = role === "student" ? "My requests" : "Staff queue";
+    get("demo-assignment-filter").hidden = role !== "staff";
+    const assignment = role === "staff" ? get("demo-assignment").value : "";
     const query = get("demo-search").value.trim().toLowerCase();
     const list = get("demo-list");
     list.replaceChildren();
     for (const ticket of tickets) {
       if (!visible(ticket)) continue;
+      if (assignment === "mine" && ticket.assigneeName !== demoStaff) continue;
+      if (assignment === "unassigned" && ticket.assigneeName) continue;
       if (!(reference(ticket.id) + " " + ticket.title).toLowerCase().includes(query)) continue;
       const link = document.createElement("a");
       link.href = "#ticket-" + ticket.id;
       const heading = element("div", "");
-      heading.append(element("strong", ticket.title), element("small", reference(ticket.id) + " · " + ticket.category));
+      heading.append(element("strong", ticket.title), element("small", reference(ticket.id) + " · " + ticket.category + " · " + (ticket.assigneeName || "Unassigned")));
       link.append(heading, statusPill(ticket.status));
       const row = document.createElement("li");
       row.append(link);
@@ -85,6 +90,8 @@
     get("demo-meta").textContent = ticket.category + " · " + ticket.priority + " priority";
     get("demo-description").textContent = ticket.description;
     get("demo-current").replaceChildren(statusPill(ticket.status));
+    get("demo-assignee").textContent = ticket.assigneeName || "Unassigned";
+    get("demo-claim").hidden = role !== "staff" || Boolean(ticket.assigneeName);
     get("demo-update").hidden = role !== "staff";
     get("demo-update").reset();
     get("demo-status").replaceChildren(new Option("Choose a status", ""),
@@ -119,6 +126,15 @@
     });
   }
 
+  get("demo-assignment").addEventListener("change", renderQueue);
+  get("demo-claim").addEventListener("click", () => {
+    if (role !== "staff" || !selected || selected.assigneeName) return;
+    const entry = { status: selected.status, note: "Assigned to " + demoStaff + ".", created_at: new Date().toISOString() };
+    const updated = { ...selected, assigneeName: demoStaff, history: [entry, ...selected.history] };
+    if (!save(tickets.map((ticket) => ticket.id === selected.id ? updated : ticket))) return;
+    announce(reference(selected.id) + " assigned to " + demoStaff + ".");
+    render();
+  });
   get("demo-search").addEventListener("input", renderQueue);
   get("demo-submit").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -154,6 +170,7 @@
   get("demo-reset").addEventListener("click", () => {
     if (!window.confirm("Discard your demo changes and restore the sample requests?")) return;
     if (!save(seed)) return;
+    get("demo-assignment").value = "";
     get("demo-search").value = "";
     get("demo-submit").reset();
     render();

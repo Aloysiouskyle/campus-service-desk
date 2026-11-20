@@ -39,6 +39,14 @@
       {% for choice in choices %}<option {% if filters[key] == choice %}selected{% endif %}>{{ choice }}</option>{% endfor %}
       </select></label>
     {% endfor %}
+    {% if not read_only and not student_view %}
+    <label><span class="sr-only">Assignment</span><select name="assignee">
+      {% for value, label in [('', 'All assignments'), ('unassigned', 'Unassigned'), (session.email, 'My assigned requests')] %}
+      <option value="{{ value }}" {% if filters.assignee == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+      {% for email in other_assignees %}<option value="{{ email }}" {% if filters.assignee == email %}selected{% endif %}>{{ email }}</option>{% endfor %}
+    </select></label>
+    {% endif %}
     <button class="button outline">Filter</button>
     {% if filters.values()|select|list %}<a class="text-link" href="{{ url_for('dashboard') }}#request-list">Clear</a>{% endif %}
   </form>
@@ -49,7 +57,7 @@
       <tbody>
       {% for ticket in tickets %}
       <tr>
-        <td class="request-cell"><a href="{{ url_for('detail', ticket_id=ticket.id) }}">{{ ticket.title }}</a><small>{{ ticket.id|reference }}</small></td>
+        <td class="request-cell"><a href="{{ url_for('detail', ticket_id=ticket.id) }}">{{ ticket.title }}</a><small>{{ ticket.id|reference }} · {{ ticket.assignee_email or 'Unassigned' }}</small></td>
         <td data-label="Category">{{ ticket.category }}</td>
         <td data-label="Priority"><span class="priority {{ ticket.priority|slug }}">{{ ticket.priority }}</span></td>
         <td data-label="Status"><span class="pill {{ ticket.status|slug }}">{{ ticket.status }}</span></td>

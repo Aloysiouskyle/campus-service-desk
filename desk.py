@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS tickets (
     id INTEGER PRIMARY KEY,
     owner_email TEXT REFERENCES accounts(email),
+    assignee_email TEXT REFERENCES accounts(email),
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     category TEXT NOT NULL,
@@ -95,6 +96,23 @@ def add_event(db, ticket_id, status, note, created_at):
     )
 
 
+def claim_ticket(db, ticket_id, staff_email):
+    with db:
+        # SQLite serializes writers. Only the first claim can match the empty assignee.
+        changed = db.execute(
+            "UPDATE tickets SET assignee_email = ? WHERE id = ? AND assignee_email IS NULL",
+            (staff_email, ticket_id),
+        ).rowcount
+        ticket = db.execute("SELECT assignee_email, status FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+        if ticket is None:
+            return 404
+        if ticket["assignee_email"] != staff_email:
+            return 409
+        if changed:
+            add_event(db, ticket_id, ticket["status"], f"Assigned to {staff_email}.", timestamp())
+    return 200
+
+
 def change_status(db, ticket_id, expected_event, status, note):
     # A transaction prevents simultaneous updates from reading the same old status.
     with db:
@@ -119,7 +137,10 @@ def init_db(db, seed=False):
         if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='staff'").fetchone():
             db.execute("INSERT INTO accounts SELECT email, password_hash, 'staff' FROM staff")
             db.execute("DROP TABLE staff")
-        if "owner_email" not in {row["name"] for row in db.execute("PRAGMA table_info(tickets)")}:
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(tickets)")}
+        if "assignee_email" not in columns:
+            db.execute("ALTER TABLE tickets ADD COLUMN assignee_email TEXT REFERENCES accounts(email)")
+        if "owner_email" not in columns:
             db.execute("ALTER TABLE tickets ADD COLUMN owner_email TEXT REFERENCES accounts(email)")
         db.execute("CREATE INDEX IF NOT EXISTS tickets_by_owner ON tickets(owner_email, status)")
     if seed:
@@ -146,6 +167,12 @@ def matching_tickets(db, filters, owner_email=None):
     if owner_email is not None:
         clauses.append("owner_email = ?")
         values.append(owner_email)
+    assignee = filters.get("assignee")
+    if assignee == "unassigned":
+        clauses.append("assignee_email IS NULL")
+    elif assignee:
+        clauses.append("assignee_email = ?")
+        values.append(assignee)
     for field in ("status", "category", "priority"):
         if filters[field]:
             clauses.append(f"{field} = ?")
