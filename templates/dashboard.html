@@ -1,10 +1,7 @@
 {% extends "base.html" %}
 {% block body_class %}dashboard-scene{% endblock %}
 {% block content %}
-  <figure class="campus-photo"><img src="/assets/campus-photos/mukono-wide/3840.webp"
-    srcset="/assets/campus-photos/mukono-wide/960.webp 960w, /assets/campus-photos/mukono-wide/1920.webp 1920w, /assets/campus-photos/mukono-wide/3840.webp 3840w"
-    sizes="100vw" fetchpriority="high" alt="Bishop Tucker Building, Uganda Christian University" width="8256" height="4528">
-  <figcaption>Bishop Tucker Building · Mukono<br><a href="https://commons.wikimedia.org/wiki/File:The_Bishop_Tucker_Building_-_UCU_Mukono_06.jpg">Ssemmanda will</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></figcaption></figure>
+{% include "campus_photo.html" %}
 <header class="hero campus-hero">
   <div class="hero-copy">
     <p class="eyebrow">CAMPUS SERVICE DESK</p>

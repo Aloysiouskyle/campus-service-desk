@@ -357,3 +357,66 @@ h1 { font-weight: 500; }
 .message-list li { border-bottom: 1px solid var(--line); padding: .55rem 0; overflow-wrap: anywhere; }
 .message-list time { display: block; color: var(--muted); font-size: .85rem; }
 .message-list p { white-space: pre-wrap; margin: .35rem 0 0; }
+
+.demo-scene {
+  --demo-glass: rgb(250 255 251 / 61%);
+  --demo-edge: rgb(255 255 255 / 76%);
+  --demo-veil: rgb(246 252 249 / 28%);
+  --muted: #314841;
+  background: #c5d6cd;
+  isolation: isolate;
+}
+[data-theme="dark"] .demo-scene {
+  --demo-glass: rgb(12 25 28 / 45%);
+  --demo-edge: rgb(224 248 251 / 29%);
+  --demo-veil: rgb(7 18 22 / 38%);
+  --muted: #d2e3df;
+  background: #122025;
+}
+.demo-scene main > .campus-photo {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+.demo-scene .campus-photo img { object-position: center; }
+.demo-scene .campus-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--demo-veil);
+  pointer-events: none;
+}
+.demo-scene .campus-photo figcaption {
+  position: fixed;
+  inset: auto 1rem .75rem auto;
+  max-width: calc(100vw - 2rem);
+}
+.demo-scene :is(.panel, .topbar, .page-head) {
+  background: var(--demo-glass);
+  border: 1px solid var(--demo-edge);
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / 35%), 0 12px 32px rgb(8 23 23 / 18%);
+  -webkit-backdrop-filter: blur(9px) saturate(125%);
+  backdrop-filter: blur(9px) saturate(125%);
+}
+.demo-scene .page-head { border-radius: 18px; padding: clamp(1rem, 3vw, 2rem); }
+.demo-scene main { padding-bottom: 6rem; }
+.demo-scene #demo-new > h2,
+.demo-scene .back {
+  background: var(--demo-glass);
+  border-radius: .6rem;
+  padding: .45rem .75rem;
+  width: fit-content;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .demo-scene .campus-photo img { animation: campus-reveal 1300ms ease-out both; }
+}
+@media (max-width: 620px) {
+  .demo-scene .campus-photo img { object-position: 57% center; }
+  .demo-scene .campus-photo figcaption { position: absolute; }
+}
+.demo-scene main > .campus-photo { pointer-events: none; }
+.demo-scene .campus-photo figcaption { pointer-events: auto; }
+.demo-scene .sidebar {
+  background: rgb(13 36 33 / 76%);
+  backdrop-filter: blur(9px) saturate(120%);
+}

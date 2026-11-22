@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% block body_class %}demo-scene{% endblock %}
 {% block title %}Interactive demo{% endblock %}
 {% block breadcrumb %}Interactive demo{% endblock %}
 {% block content %}
+{% include "campus_photo.html" %}
 <header class="page-head">
   <h1>Interactive demo</h1>
   <p>Submit a request as a student, then switch to staff to respond. Both views share the fictional requests in this tab. Refresh keeps your changes. Reset demo restores the samples.</p>
