@@ -5,7 +5,7 @@
   const seed = JSON.parse(get("demo-seed").textContent);
   const transitions = JSON.parse(get("demo-transitions").textContent);
   const storageKey = "campus-desk.private-demo.v1";
-  const views = ["queue", "new", "detail"];
+  const views = ["queue", "new", "detail", "notifications"];
   const reference = (id) => "CSD-" + String(id).padStart(4, "0");
   const roleKey = "campus-desk.demo-role";
   const demoStaff = "Grace Namuli";
@@ -53,11 +53,14 @@
     return element("span", status, "pill " + status.toLowerCase().replaceAll(" ", "-"));
   }
 
-  function visible(ticket) {
+  function visibleToStudent(ticket) {
     // Earlier demos had one user. Keep their submitted tickets in the student view.
-    const mine = ticket.submittedBy === "student" ||
+    return ticket.submittedBy === "student" ||
       (ticket.submittedBy === undefined && (studentSamples.has(ticket.id) || !sampleIds.has(ticket.id)));
-    return role === "staff" || mine;
+  }
+
+  function visible(ticket) {
+    return role === "staff" || visibleToStudent(ticket);
   }
 
   function renderQueue() {
@@ -114,10 +117,45 @@
     }));
   }
 
+  function renderNotifications() {
+    const items = tickets.filter(visible).flatMap((ticket) =>
+      (ticket.notifications ?? []).filter((item) => item.recipient === role)
+        .map((item) => ({ ticket, item })));
+    items.sort((a, b) => b.item.createdAt.localeCompare(a.item.createdAt));
+    const unread = items.filter(({ item }) => !item.read).length;
+    get("demo-inbox-link").textContent = "Notifications (" + unread + ")";
+    const list = get("demo-notification-list");
+    list.replaceChildren();
+    for (const { ticket, item } of items) {
+      const label = (item.kind === "reply" ? "New reply" : "Status changed") +
+        " on " + reference(ticket.id) + " · " + (item.read ? "Read" : "Unread");
+      const button = element("button", label, "button outline");
+      button.type = "button";
+      button.addEventListener("click", () => {
+        const notifications = ticket.notifications.map((entry) => entry === item ? { ...entry, read: true } : entry);
+        if (!save(tickets.map((entry) => entry.id === ticket.id ? { ...entry, notifications } : entry))) return;
+        location.hash = "ticket-" + ticket.id;
+        render();
+        get(item.kind === "reply" ? "demo-conversation" : "demo-history").scrollIntoView();
+      });
+      const row = element("li", "");
+      row.append(button);
+      list.append(row);
+    }
+    if (!items.length) list.append(element("li", "No notifications yet.", "muted"));
+  }
+
+  function withNotification(ticket, recipient, kind) {
+    if (!recipient) return ticket;
+    const notification = { recipient, kind, createdAt: new Date().toISOString(), read: false };
+    return { ...ticket, notifications: [...(ticket.notifications ?? []), notification] };
+  }
+
   function render() {
     const hash = location.hash.slice(1);
     selected = tickets.find((ticket) => visible(ticket) && "ticket-" + ticket.id === hash);
-    const view = selected ? "detail" : hash === "new" ? "new" : "queue";
+    const view = selected ? "detail" : ["new", "notifications"].includes(hash) ? hash : "queue";
+    renderNotifications();
     for (const name of views) get("demo-" + name).hidden = name !== view;
     if (selected) renderDetail(selected);
     else if (view === "queue") renderQueue();
@@ -178,7 +216,10 @@
       body,
       createdAt: new Date().toISOString(),
     };
-    const updated = { ...selected, messages: [...(selected.messages ?? []), message] };
+    const recipient = role === "staff"
+      ? (visibleToStudent(selected) ? "student" : null)
+      : (selected.assigneeName ? "staff" : null);
+    const updated = withNotification({ ...selected, messages: [...(selected.messages ?? []), message] }, recipient, "reply");
     if (!save(tickets.map((ticket) => ticket.id === selected.id ? updated : ticket))) return;
     announce("Message sent.");
     render();
@@ -189,7 +230,8 @@
     const status = get("demo-status").value;
     if (role !== "staff" || !selected || !transitions[selected.status].includes(status)) return;
     const entry = { status, note: get("demo-note").value.trim() || "Status updated.", created_at: new Date().toISOString() };
-    const updated = { ...selected, status, history: [entry, ...selected.history] };
+    const updated = withNotification({ ...selected, status, history: [entry, ...selected.history] },
+      visibleToStudent(selected) ? "student" : null, "status");
     if (!save(tickets.map((ticket) => ticket.id === selected.id ? updated : ticket))) return;
     announce(reference(selected.id) + " moved to " + status + ".");
     render();

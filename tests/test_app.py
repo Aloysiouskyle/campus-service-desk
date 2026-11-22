@@ -175,6 +175,18 @@ class ServiceDeskTests(unittest.TestCase):
         self.assertNotIn(b"Assign to me", student_page)
         self.assertEqual(self.update("In progress").status_code, 303)
         self.assertIn(b"Confirmed by lab support.", alicia.get("/requests/1").data)
+        inbox = alicia.get("/notifications")
+        self.assertIn(b"Notifications (2)", inbox.data)
+        self.assertIn(b"New reply on CSD-0001", inbox.data)
+        self.assertIn(b"Status changed on CSD-0001", inbox.data)
+        self.assertIn(b"Notifications (0)", daniel.get("/notifications").data)
+        path = "/notifications/1/open"
+        self.assertEqual(daniel.post(path, data={"csrf": token}).status_code, 404)
+        self.assertEqual(alicia.post(path, data={"csrf": self.hidden(inbox, "csrf")}).location,
+                         "/requests/1#conversation")
+        self.assertIn(b"Notifications (1)", alicia.get("/notifications").data)
+        self.assertIn(b"New reply on CSD-0001", alicia.get("/notifications").data)
+
 
     def test_concurrent_staff_claims_record_one_winner_and_one_history_entry(self):
         self.submit()

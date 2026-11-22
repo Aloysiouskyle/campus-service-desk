@@ -157,7 +157,37 @@ def create_app(config=None):
     @app.context_processor
     def template_values():
         return dict(statuses=desk.STATUSES, categories=desk.CATEGORIES, priorities=desk.PRIORITIES,
-                    read_only=app.config["READ_ONLY"], student_view=g.get("role") == "student", csrf_token=csrf_token)
+                    unread_count=unread_count, read_only=app.config["READ_ONLY"], student_view=g.get("role") == "student", csrf_token=csrf_token)
+
+    def unread_count():
+        return database().execute(
+            "SELECT count(*) FROM notifications WHERE recipient = ? AND is_read = 0",
+            (session["email"],),
+        ).fetchone()[0]
+
+    @app.get("/notifications")
+    def notifications():
+        if g.role is None:
+            abort(404)
+        items = database().execute(
+            "SELECT * FROM notifications WHERE recipient = ? ORDER BY id DESC",
+            (session["email"],),
+        ).fetchall()
+        return render_template("notifications.html", items=items)
+
+    @app.post("/notifications/<int:item_id>/open")
+    def open_notification(item_id):
+        db = database()
+        with db:
+            item = db.execute(
+                """UPDATE notifications SET is_read = 1 WHERE id = ? AND recipient = ?
+                   RETURNING ticket_id, kind""",
+                (item_id, session["email"]),
+            ).fetchone()
+        if item is None:
+            abort(404)
+        anchor = "conversation" if item["kind"] == "reply" else "activity-history"
+        return redirect(url_for("detail", ticket_id=item["ticket_id"], _anchor=anchor), code=303)
 
     @app.template_filter("reference")
     def reference(ticket_id):
@@ -273,8 +303,11 @@ def create_app(config=None):
                    WHERE id = ? AND (? IS NULL OR owner_email = ?)""",
                 (session["email"], g.role, body, desk.timestamp(), ticket_id, student_owner(), student_owner()),
             ).rowcount
-        if not added:
-            abort(404)
+            if not added:
+                abort(404)
+            ticket = db.execute("SELECT owner_email, assignee_email FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+            recipient = ticket["owner_email"] if g.role == "staff" else ticket["assignee_email"]
+            desk.notify(db, ticket_id, recipient, session["email"], "reply")
         return redirect(url_for("detail", ticket_id=ticket_id, _anchor="conversation"), code=303)
 
     @app.post("/requests/<int:ticket_id>/claim")
@@ -298,7 +331,7 @@ def create_app(config=None):
         if len(note) > 500:
             return render_detail(ticket_id, "Keep the note to 500 characters.", 422)
         result = desk.change_status(database(), ticket_id, request.form.get("version", ""),
-                                    status, note or "Status updated.")
+                                    status, note or "Status updated.", session["email"])
         if result == 404:
             abort(404)
         if result == 409:

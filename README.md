@@ -47,7 +47,7 @@ flowchart TD
 
 When you submit a request, Flask checks the form and asks SQLite to save the ticket and its first history entry together. Flask then redirects you to the ticket page. On that page, the app reads the ticket and its history from SQLite and inserts them into an HTML template.
 
-SQLite has four tables. **messages** stores each ticket’s conversation, including the author and timestamp. **accounts** stores each login and its student or staff role. **tickets** holds the current state of each request and links it to the account that submitted it. **events** holds its submission and status changes, with many events linked to one ticket. The local database is a file at `instance/desk.sqlite3`, so requests survive application restarts. Set `CSD_DATABASE` to use a different file.
+SQLite has five tables. **notifications** tracks unread ticket updates for each recipient. **messages** stores each ticket’s conversation, including the author and timestamp. **accounts** stores each login and its student or staff role. **tickets** holds the current state of each request and links it to the account that submitted it. **events** holds its submission and status changes, with many events linked to one ticket. The local database is a file at `instance/desk.sqlite3`, so requests survive application restarts. Set `CSD_DATABASE` to use a different file.
 
 | Path | Job |
 | --- | --- |
@@ -84,3 +84,5 @@ On Vercel, the app uses an in-memory SQLite database seeded with the same fictio
 ## Campus photography
 
 The dashboard and sign-in share a wide photograph of the [Bishop Tucker Building by Ssemmanda will](https://commons.wikimedia.org/wiki/File:The_Bishop_Tucker_Building_-_UCU_Mukono_06.jpg). The original is 8,256 × 4,528 pixels. Responsive crops and WebP renditions are distributed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). This portfolio project is independent of the university.
+
+The **Notifications** menu shows unread staff replies and status changes for ticket owners. Student replies notify the assigned staff member. Opening an alert marks it as read and jumps to the relevant part of the ticket.

@@ -43,7 +43,7 @@
     </section>
     {% endif %}
     <section class="panel padded">
-      <h2>Activity history</h2>
+      <h2 id="activity-history">Activity history</h2>
       <ol class="timeline">
         {% for event in history %}<li><span class="pill {{ event.status|slug }}">{{ event.status }}</span><time datetime="{{ event.created_at }}">{{ event.created_at|date }} · {{ event.created_at[11:16] }} UTC</time><p>{{ event.note }}</p></li>{% endfor %}
       </ol>

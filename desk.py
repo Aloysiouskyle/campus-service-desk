@@ -45,6 +45,14 @@ CREATE TABLE IF NOT EXISTS messages (
     body TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(id),
+    recipient TEXT NOT NULL REFERENCES accounts(email),
+    kind TEXT NOT NULL CHECK (kind IN ('reply', 'status')),
+    is_read INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS notifications_by_recipient ON notifications(recipient, id);
 CREATE INDEX IF NOT EXISTS messages_by_ticket ON messages(ticket_id, id);
 CREATE INDEX IF NOT EXISTS events_by_ticket ON events(ticket_id, id);
 """
@@ -122,11 +130,17 @@ def claim_ticket(db, ticket_id, staff_email):
     return 200
 
 
-def change_status(db, ticket_id, expected_event, status, note):
+def notify(db, ticket_id, recipient, actor, kind):
+    if recipient and recipient != actor:
+        db.execute("INSERT INTO notifications(ticket_id, recipient, kind) VALUES (?, ?, ?)",
+                   (ticket_id, recipient, kind))
+
+
+def change_status(db, ticket_id, expected_event, status, note, actor):
     # A transaction prevents simultaneous updates from reading the same old status.
     with db:
         db.execute("BEGIN IMMEDIATE")
-        ticket = db.execute("SELECT status FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+        ticket = db.execute("SELECT status, owner_email FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
         if ticket is None:
             return 404
         last_event = db.execute("SELECT max(id) FROM events WHERE ticket_id = ?", (ticket_id,)).fetchone()[0]
@@ -136,6 +150,7 @@ def change_status(db, ticket_id, expected_event, status, note):
             return 422
         db.execute("UPDATE tickets SET status = ? WHERE id = ?", (status, ticket_id))
         add_event(db, ticket_id, status, note, timestamp())
+        notify(db, ticket_id, ticket["owner_email"], actor, "status")
     return 200
 
 

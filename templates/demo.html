@@ -13,6 +13,10 @@
 </header>
 <p id="demo-message" role="status"></p>
 <noscript><p class="notice">Enable JavaScript to use the interactive workspace.</p></noscript>
+<section id="demo-notifications" class="panel padded" hidden>
+  <h2>Notifications</h2>
+  <ul class="message-list" id="demo-notification-list"></ul>
+</section>
 <section id="demo-queue" class="panel padded" hidden>
   <div class="panel-head"><h2 id="demo-queue-title">My requests</h2><a class="button primary" href="#new">{{ icon('plus',17) }} New request</a></div>
   <label for="demo-search">Find a request</label>
@@ -40,7 +44,7 @@
   <div class="detail-grid"><div class="panel padded">
     <p id="demo-reference" class="eyebrow"></p><h2 id="demo-title"></h2>
     <p id="demo-meta" class="muted"></p><p id="demo-description" class="description"></p>
-    <section class="conversation">
+    <section class="conversation" id="demo-conversation">
       <h3>Conversation</h3>
       <ol class="message-list" id="demo-messages"></ol>
       <form id="demo-message-form">
